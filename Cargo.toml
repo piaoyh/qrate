@@ -1,10 +1,10 @@
 [package]
 authors = ["PARK Youngho"]
 name = "qrate"
-version = "0.0.2"
+version = "0.0.3"
 edition = "2024"
 keywords = ["quiz", "bank", "examination", "question", "teacher"]
-categories = ["algorithms", "data structures", "database interfaces"]
+categories = ["algorithms", "data-structures", "database"]
 description = "A examination generator library that generates different quiz sets for all students so that each student may have a different quiz set from the quiz sets of the others."
 license = "MIT OR Apache-2.0"
 readme = "README.md"
