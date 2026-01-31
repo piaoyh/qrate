@@ -283,7 +283,7 @@ impl QBDB for SQLiteDB
     /// `Result<(), String>` - `Ok(())` on success, or an error message string on failure.
     fn write_header_with_default(&self) -> Result<(), String>
     {
-        let header = Header::new_with_Default();
+        let header = Header::new_with_default();
         self.write_header(&header)
     }
 
@@ -372,7 +372,7 @@ impl QBDB for SQLiteDB
 
         if let Ok(vec_question) = vec_question_result
         {
-            let mut question_bank = QBank::new_with_Header(self.read_header()?);
+            let mut question_bank = QBank::new_with_header(self.read_header()?);
             for info in vec_question
             {
                 if let Ok(q) = info
