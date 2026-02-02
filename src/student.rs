@@ -84,10 +84,14 @@ impl Student
     /// Sets the student's name.
     /// 
     /// # Arguments
-    /// `name` is student's name and of the type &String.
-    ///
+    /// * `name` - The new name for the student.
+    /// 
     /// # Examples
     /// ```
+    /// use qrate::Student;
+    /// let mut student = Student::new_empty();
+    /// student.set_name("Alice".to_string());
+    /// assert_eq!(student.get_name(), "Alice");
     /// ```
     pub fn set_name(&mut self, name: String)
     {
@@ -114,11 +118,15 @@ impl Student
     // pub fn set_id(&mut self, id: String)
     /// Sets the student's ID.
     ///
-    /// # Output
-    /// `&String` - A reference to the student's ID.
+    /// # Arguments
+    /// * `id` - The new ID for the student.
     ///
     /// # Examples
     /// ```
+    /// use qrate::Student;
+    /// let mut student = Student::new_empty();
+    /// student.set_id("new_id_123".to_string());
+    /// assert_eq!(student.get_id(), "new_id_123");
     /// ```
     pub fn set_id(&mut self, id: String)
     {

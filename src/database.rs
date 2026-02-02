@@ -13,6 +13,7 @@ use rusqlite::{ Connection, Error };
 /// Represents an SQLite database connection.
 ///
 /// This struct provides a simple interface for opening and closing an SQLite database connection.
+#[derive(Debug)]
 pub struct SQLiteDB
 {
     /// The path to the SQLite database file.

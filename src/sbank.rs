@@ -26,6 +26,14 @@ pub trait SBankHelper
     ///
     /// # Examples
     /// ```
+    /// use qrate::{SBank, SBankHelper, Student};
+    ///
+    /// let mut sbank = SBank::new();
+    /// sbank.push(Student::new("Alice".to_string(), "s123".to_string()));
+    /// sbank.push(Student::new("Bob".to_string(), "s456".to_string()));
+    ///
+    /// assert_eq!(sbank.get_student(1).unwrap().get_name(), "Alice");
+    /// assert!(sbank.get_student(3).is_none());
     /// ```
     fn get_student(&self, number: usize) -> Option<&Student>;
 
@@ -37,6 +45,12 @@ pub trait SBankHelper
     ///
     /// # Examples
     /// ```
+    /// use qrate::{SBank, SBankHelper, Student};
+    ///
+    /// let mut sbank = SBank::new();
+    /// sbank.push_student(Student::new("Charlie".to_string(), "s789".to_string()));
+    /// assert_eq!(sbank.len(), 1);
+    /// assert_eq!(sbank.get_student(1).unwrap().get_name(), "Charlie");
     /// ```
     fn push_student(&mut self, student: Student);
 }

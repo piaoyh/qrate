@@ -47,7 +47,7 @@ impl Excel
     /// assert!(excel_handler.is_some());
     /// assert_eq!(excel_handler.unwrap().get_path(), "my_quiz.xlsx");
     /// ```
-    pub fn open(path: String, extention: &str) -> Option<Self>
+    pub(crate) fn open(path: String, extention: &str) -> Option<Self>
     {
         let p = match path.find('.')
         {
@@ -75,15 +75,58 @@ impl Excel
         &self.path
     }
     
-    /// Helper function to parse a row from the "Questions" sheet into a `Question` struct.
+    /// Parses a single row from an Excel sheet into a `Question` struct.
+    ///
+    /// This function takes a slice of `calamine::Data` representing a single row
+    /// from the "Questions" sheet and attempts to parse it into a `Question`.
+    ///
+    /// # Arguments
+    /// * `row` - A slice of `calamine::Data` representing the cells of a single row.
+    ///   It expects the cells to be in the order: ID, Category, Question Text,
+    ///   followed by pairs of Choice Text and IsAnswer.
+    ///
+    /// # Output
+    /// * `Some(Question)` if the row is successfully parsed.
+    /// * `None` if essential data (ID, Category, Question Text) is missing or has
+    ///   an incorrect data type.
+    ///
+    /// # Examples
+    /// ```
+    /// use qrate::{Excel, Question, Choices};
+    /// use calamine::Data;
+    ///
+    /// // Simulate a row from an Excel sheet: ID, Category, Question, Choice1, IsAnswer1, Choice2, IsAnswer2
+    /// let row_data = vec![
+    ///     Data::Float(1.0), // ID
+    ///     Data::Float(10.0), // Category
+    ///     Data::String("What is the capital of France?".to_string()), // Question Text
+    ///     Data::String("Berlin".to_string()), Data::Bool(false), // Choice 1
+    ///     Data::String("Paris".to_string()), Data::Bool(true),  // Choice 2
+    ///     Data::String("Rome".to_string()), Data::Bool(false),  // Choice 3
+    /// ];
+    ///
+    /// let question = Excel::parse_question_row(&row_data).unwrap();
+    ///
+    /// assert_eq!(question.get_id(), 1);
+    /// assert_eq!(question.get_category(), 10);
+    /// assert_eq!(question.get_question(), "What is the capital of France?");
+    ///
+    /// let expected_choices = Choices::from(vec![
+    ///     ("Berlin".to_string(), false),
+    ///     ("Paris".to_string(), true),
+    ///     ("Rome".to_string(), false),
+    /// ]);
+    /// assert_eq!(question.get_choices(), &expected_choices);
+    /// ```
     pub(crate) fn parse_question_row(row: &[calamine::Data]) -> Option<Question>
     {
         let id = row.get(0).and_then(|d| d.as_f64()).map(|f| f as u16)?;
-        let category = row.get(1).and_then(|d| d.as_f64()).map(|f| f as u8)?;
-        let question_text = row.get(2).and_then(|d| d.as_string())?;
+        let group = row.get(1).and_then(|d| d.as_f64()).map(|f| f as u16)?;
+        let category = row.get(2).and_then(|d| d.as_f64()).map(|f| f as u8)?;
+        let question_text = row.get(3).and_then(|d| d.as_string())?;
         
         let mut choices = Choices::new();
-        for choice_pair in row.get(3..).unwrap_or(&[]).chunks(2)
+        for choice_pair in row.get(4..).unwrap_or(&[]).chunks(2)
         {
             let choice_text = choice_pair.get(0).and_then(|d| d.get_string()).map(|s| s.to_string()).unwrap_or_default();
             let is_answer = choice_pair.get(1).and_then(|d| d.get_bool()).unwrap_or_else(|| {
@@ -100,6 +143,6 @@ impl Excel
                 break;
             }
         }
-        Some(Question::new(id, category, question_text, choices))
+        Some(Question::new(id, group, category, question_text, choices))
     }
 }

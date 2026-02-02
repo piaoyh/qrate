@@ -35,6 +35,8 @@ pub mod sbdb;
 /// The `student` module defines the `Student` structure.
 pub mod student;
 
+pub mod shuffler;
+
 pub use database::SQLiteDB;
 pub use excel::Excel;
 pub use header::Header;
@@ -45,3 +47,4 @@ pub use question::{ ChoiceAnswer, Choices, Question };
 pub use sbank::{ SBank, SBankHelper };
 pub use sbdb::SBDB;
 pub use student::Student;
+pub use shuffler::ShuffledQuestion;

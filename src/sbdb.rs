@@ -8,20 +8,172 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 
+use calamine::{ Reader, DataType }; // Add DataType here
+
 use crate::Excel;
 use crate::SBank;
 use crate::SQLiteDB;
 use crate::Student;
-use calamine::{Reader, DataType}; // Add DataType here
 
 /// A trait defining the database operations for a Student Bank (`SBank`).
 ///
 /// This abstracts the storage mechanism for student data.
 pub trait SBDB
 {
-    fn open(path: String) -> Option<Self> where Self: Sized;
+    /// Opens a connection to the student database.
+    ///
+    /// If the path does not have a file extension, a default extension
+    /// specific to the database type (e.g., `.sbdb`) is appended.
+    ///
+    /// # Arguments
+    /// * `path` - The file path for the database. For in-memory SQLite databases,
+    ///   use `":memory:"`.
+    ///
+    /// # Output
+    /// `Some(Self)` if the connection is successful, otherwise `None`.
+    ///
+    /// # Example 1 for SQLiteDB
+    /// ```
+    /// use qrate::{SBDB, SQLiteDB};
+    ///
+    /// let db = SQLiteDB::open(":memory:".to_string());
+    /// assert!(db.is_some());
+    /// ```
+    ///
+    /// # Example 2 for Excel
+    /// ```
+    /// use qrate::{SBDB, Excel};
+    ///
+    /// let excel = Excel::open("students.sb.xlsx".to_string());
+    /// assert!(excel.is_some());
+    /// assert_eq!(excel.unwrap().get_path(), "students.sb.xlsx");
+    /// ```
+    fn open(path: String) -> Option<Self>
+    where Self: Sized;
+
+    /// Creates the necessary table(s) for storing student data.
+    ///
+    /// For a database that already has the table, this should not produce an error.
+    ///
+    /// # Output
+    /// `Ok(())` on success, or an error string on failure.
+    ///
+    /// # Example 1 for SQLiteDB
+    /// ```
+    /// use qrate::{SBDB, SQLiteDB};
+    ///
+    /// let db = SQLiteDB::open(":memory:".to_string()).unwrap();
+    /// let result = db.make_table();
+    /// assert!(result.is_ok());
+    /// ```
+    ///
+    /// # Example 2 for Excel
+    /// ```
+    /// use qrate::{SBDB, Excel};
+    /// use std::path::Path;
+    ///
+    /// let file_path = "test_make_table.sb.xlsx";
+    /// let excel = Excel::open(file_path.to_string()).unwrap();
+    /// let result = excel.make_table();
+    /// assert!(result.is_ok());
+    /// assert!(Path::new(file_path).exists());
+    /// std::fs::remove_file(file_path).unwrap(); // Clean up
+    /// ```
     fn make_table(&self) -> Result<(), String>;
+
+    /// Reads all student data from the database into an `SBank`.
+    ///
+    /// # Output
+    /// `Some(SBank)` containing all students found in the database. Returns an
+    /// empty `SBank` if no students are found. Returns `None` if a database
+    /// read error occurs.
+    ///
+    /// # Example 1 for SQLiteDB
+    /// ```
+    /// use qrate::{SBank, Student, SBDB, SQLiteDB};
+    ///
+    /// let mut db = SQLiteDB::open(":memory:".to_string()).unwrap();
+    /// db.make_table().unwrap();
+    ///
+    /// let mut sbank = SBank::new();
+    /// sbank.push(Student::new("Alice".to_string(), "s123".to_string()));
+    /// db.write_sbank(&sbank).unwrap();
+    ///
+    /// let read_sbank = db.read_sbank().unwrap();
+    /// assert_eq!(read_sbank.len(), 1);
+    /// assert_eq!(read_sbank.get(0).unwrap().get_name(), "Alice");
+    /// ```
+    ///
+    /// # Example 2 for Excel
+    /// ```
+    /// use qrate::{SBank, Student, SBDB, Excel};
+    /// use std::fs;
+    ///
+    /// let file_path = "test_read_sbank.sb.xlsx";
+    /// let mut excel = Excel::open(file_path.to_string()).unwrap();
+    ///
+    /// let mut sbank = SBank::new();
+    /// sbank.push(Student::new("Bob".to_string(), "s456".to_string()));
+    /// excel.write_sbank(&sbank).unwrap();
+    ///
+    /// let read_sbank = excel.read_sbank().unwrap();
+    /// assert_eq!(read_sbank.len(), 1);
+    /// assert_eq!(read_sbank.get(0).unwrap().get_name(), "Bob");
+    ///
+    /// fs::remove_file(file_path).unwrap(); // Clean up
+    /// ```
     fn read_sbank(&self) -> Option<SBank>;
+
+    /// Writes the contents of an `SBank` to the database.
+    ///
+    /// This will insert all students from the `SBank` into the database.
+    /// If the table already contains data, this may result in duplicates
+    /// depending on the implementation.
+    ///
+    /// # Arguments
+    /// * `sbank` - A reference to the `SBank` containing the students to be written.
+    ///
+    /// # Output
+    /// `Ok(())` on success, or an error string on failure.
+    ///
+    /// # Example 1 for SQLiteDB
+    /// ```
+    /// use qrate::{SBank, Student, SBDB, SQLiteDB};
+    ///
+    /// let mut db = SQLiteDB::open(":memory:".to_string()).unwrap();
+    /// db.make_table().unwrap();
+    ///
+    /// let mut sbank = SBank::new();
+    /// sbank.push(Student::new("Bob".to_string(), "s456".to_string()));
+    ///
+    /// let result = db.write_sbank(&sbank);
+    /// assert!(result.is_ok());
+    ///
+    /// // Verify by reading back
+    /// assert_eq!(db.read_sbank().unwrap().len(), 1);
+    /// ```
+    ///
+    /// # Example 2 for Excel
+    /// ```
+    /// use qrate::{SBank, Student, SBDB, Excel};
+    /// use std::path::Path;
+    /// use std::fs;
+    ///
+    /// let file_path = "test_write_sbank.sb.xlsx";
+    /// let mut excel = Excel::open(file_path.to_string()).unwrap();
+    ///
+    /// let mut sbank = SBank::new();
+    /// sbank.push(Student::new("Charlie".to_string(), "s789".to_string()));
+    ///
+    /// let result = excel.write_sbank(&sbank);
+    /// assert!(result.is_ok());
+    /// assert!(Path::new(file_path).exists());
+    ///
+    /// // Verify by reading back
+    /// assert_eq!(excel.read_sbank().unwrap().len(), 1);
+    ///
+    /// fs::remove_file(file_path).unwrap(); // Clean up
+    /// ```
     fn write_sbank(&mut self, sbank: &SBank) -> Result<(), String>;
 }
 
@@ -78,6 +230,7 @@ impl SBDB for SQLiteDB
     ///
     /// # Arguments
     /// * `sbank` - A reference to the `SBank` to be written to the database.
+    /// 
     /// # Output
     /// `Result<(), String>` - `Ok(())` on success, or an error message string on failure.
     fn write_sbank(&mut self, sbank: &SBank) -> Result<(), String>

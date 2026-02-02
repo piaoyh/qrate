@@ -15,10 +15,11 @@ pub type Choices = Vec<ChoiceAnswer>;
 #[derive(Clone)]
 pub struct Question
 {
-    id: u16,      // 1-based unique identifier.
-    category: u8, // 1-based category: 1 for single choice, 2 for multiple choice, 3 for short answer.
-    question: String,
-    choices: Choices, // For category 3, choice[0] or get_choice(1) is the answer.
+    id: u16,        // 1-based unique identifier. Should be in order as class progress
+    group: u16,     // The questions that belong to the same group will not appear in an exam set.
+    category: u8,   // 1-based category: 1 for single choice, 2 for multiple choice, 3 for short answer.
+    question: String,   // The text of the question
+    choices: Choices,   // For category 3, choice[0] or get_choice(1) is the answer.
 }
 
 impl Question
@@ -42,6 +43,7 @@ impl Question
         Self
         {
             id: 0,
+            group: 0,
             category: 1,
             question: String::new(),
             choices: Choices::new(),
@@ -53,6 +55,7 @@ impl Question
     ///
     /// # Arguments
     /// * `id` - The unique identifier for the question.
+    /// * `group` - The questions that belong to the same group will not appear in an exam set.
     /// * `category` - The category of the question (e.g., 1 for single choice, 2 for multiple choice).
     /// * `question` - The text of the question.
     /// * `choices` - A vector of `ChoiceAnswer` tuples for the question.
@@ -68,9 +71,9 @@ impl Question
     /// assert_eq!(question.get_question(), "What is Rust?");
     /// ```
     #[inline]
-    pub fn new(id: u16, category: u8, question: String, choices: Choices) -> Self
+    pub fn new(id: u16, group: u16, category: u8, question: String, choices: Choices) -> Self
     {
-        Self { id, category, question, choices }
+        Self { id, group, category, question, choices }
     }
 
     // pub fn get_id(&self) -> u16
@@ -108,6 +111,43 @@ impl Question
     pub fn set_id(&mut self, id: u16)
     {
         self.id = id;
+    }
+
+    // pub fn get_group(&self) -> u16
+    /// Gets the group of the question.
+    ///
+    /// # Output
+    /// `u16` - The group of the question.
+    ///
+    /// # Examples
+    /// ```
+    /// use qrate::Question;
+    /// let question = Question::new_empty();
+    /// assert_eq!(question.get_group(), 0);
+    /// ```
+    #[inline]
+    pub fn get_group(&self) -> u16
+    {
+        self.group
+    }
+
+    // pub fn set_group(&mut self, group: u16)
+    /// Sets the group of the question.
+    ///
+    /// # Arguments
+    /// * `group` - The new group for the question.
+    ///
+    /// # Examples
+    /// ```
+    /// use qrate::Question;
+    /// let mut question = Question::new_empty();
+    /// question.set_group(2); // Multi-choice
+    /// assert_eq!(question.get_group(), 2);
+    /// ```
+    #[inline]
+    pub fn set_group(&mut self, group: u16)
+    {
+        self.group = group;
     }
 
     // pub fn get_category(&self) -> u8

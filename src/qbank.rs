@@ -16,7 +16,7 @@ use crate::Question;
 pub struct QBank
 {
     header: Header,
-    bank: Vec<Question>,
+    questions: Vec<Question>,
 }
 
 impl QBank
@@ -31,7 +31,7 @@ impl QBank
     /// ```
     /// use qrate::QBank;
     /// let qbank = QBank::new_empty();
-    /// assert!(qbank.get_bank().is_empty());
+    /// assert!(qbank.get_questions().is_empty());
     /// ```
     #[inline]
     pub fn new_empty() -> Self
@@ -39,7 +39,7 @@ impl QBank
         QBank
         {
             header: Header::new_empty(),
-            bank: Vec::new(),
+            questions: Vec::new(),
         }
     }
 
@@ -61,7 +61,7 @@ impl QBank
         QBank
         {
             header: Header::new_with_default(),
-            bank: Vec::new(),
+            questions: Vec::new(),
         }
     }
 
@@ -79,7 +79,7 @@ impl QBank
     /// use qrate::{ QBank, Header };
     /// let custom_header = Header::new_empty();
     /// let qbank = QBank::new_with_header(custom_header);
-    /// assert!(qbank.get_bank().is_empty());
+    /// assert!(qbank.get_questions().is_empty());
     /// ```
     #[inline]
     pub fn new_with_header(header: Header) -> Self
@@ -87,7 +87,7 @@ impl QBank
         QBank
         {
             header,
-            bank: Vec::new(),
+            questions: Vec::new(),
         }
     }
 
@@ -130,7 +130,7 @@ impl QBank
         self.header = header;
     }
 
-    // pub fn get_bank(&self) -> &Vec<Question>
+    // pub fn get_questions(&self) -> &Vec<Question>
     /// Gets a reference to the vector of `Question`s.
     ///
     /// # Output
@@ -141,31 +141,31 @@ impl QBank
     /// use qrate::{ QBank, Question };
     /// let mut qbank = QBank::new_empty();
     /// qbank.push_question(Question::new_empty());
-    /// assert_eq!(qbank.get_bank().len(), 1);
+    /// assert_eq!(qbank.get_questions().len(), 1);
     /// ```
     #[inline]
-    pub fn get_bank(&self) -> &Vec<Question>
+    pub fn get_questions(&self) -> &Vec<Question>
     {
-        &self.bank
+        &self.questions
     }
 
-    // pub fn set_bank(&mut self, bank: Vec<Question>)
+    // pub fn set_questions(&mut self, questions: Vec<Question>)
     /// Sets the vector of `Question`s.
     ///
     /// # Arguments
-    /// * `bank` - The new vector of `Question`s to set for the bank.
+    /// * `questions` - The new vector of `Question`s to set for the bank.
     ///
     /// # Examples
     /// ```
     /// use qrate::{ QBank, Question };
     /// let mut qbank = QBank::new_empty();
-    /// qbank.set_bank(vec![Question::new_empty(), Question::new_empty()]);
-    /// assert_eq!(qbank.get_bank().len(), 2);
+    /// qbank.set_questions(vec![Question::new_empty(), Question::new_empty()]);
+    /// assert_eq!(qbank.get_questions().len(), 2);
     /// ```
     #[inline]
-    pub fn set_bank(&mut self, bank: Vec<Question>)
+    pub fn set_questions(&mut self, questions: Vec<Question>)
     {
-        self.bank = bank;
+        self.questions = questions;
     }
 
     // pub fn get_question(&self, q_number: usize) -> Option<&Question>
@@ -188,8 +188,8 @@ impl QBank
     /// ```
     pub fn get_question(&self, q_number: usize) -> Option<&Question>
     {
-        if (q_number <= self.bank.len()) && q_number > 0
-            { Some(&self.bank[q_number - 1]) }
+        if (q_number <= self.questions.len()) && q_number > 0
+            { Some(&self.questions[q_number - 1]) }
         else
             { None }
     }
@@ -206,12 +206,12 @@ impl QBank
     /// let mut qbank = QBank::new_empty();
     /// let question = Question::new_empty();
     /// qbank.push_question(question);
-    /// assert_eq!(qbank.get_bank().len(), 1);
+    /// assert_eq!(qbank.get_questions().len(), 1);
     /// ```
     #[inline]
     pub fn push_question(&mut self, question: Question)
     {
-        self.bank.push(question);
+        self.questions.push(question);
     }
 
     // pub fn get_choice(&self, q_number: usize, ch_number: usize) -> Option<&String>
@@ -236,9 +236,16 @@ impl QBank
     /// ```
     pub fn get_choice(&self, q_number: usize, ch_number: usize) -> Option<&String>
     {
-        if (q_number <= self.bank.len()) && q_number > 0
-            { self.bank[q_number - 1].get_choice(ch_number).map(|(text, _is_answer)| text) }
+        if (q_number <= self.questions.len()) && q_number > 0
+            { self.questions[q_number - 1].get_choice(ch_number).map(|(text, _is_answer)| text) }
         else
             { None }
+    }
+
+    
+    #[inline]
+    pub fn get_max_choices(&self) -> usize
+    {
+        self.get_questions().iter().map(|q| q.get_choices().len()).max().unwrap_or(0)
     }
 }
