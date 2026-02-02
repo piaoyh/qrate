@@ -1,3 +1,13 @@
+// Copyright 2026 PARK Youngho.
+//
+// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
+// https://www.apache.org/licenses/LICENSE-2.0> or the MIT license
+// <LICENSE-MIT or https://opensource.org/licenses/MIT>, at your option.
+// This file may not be copied, modified, or distributed
+// except according to those terms.
+///////////////////////////////////////////////////////////////////////////////
+
+
 //! # Qrate
 //!
 //! `Qrate` is a library for managing question banks and student data.
@@ -31,7 +41,7 @@ pub use header::Header;
 // pub use loader::load_question_bank_from_csv;
 pub use qbank::QBank;
 pub use qbdb::QBDB;
-pub use question::{ChoiceAnswer, Choices, Question};
-pub use sbank::{SBank, get_bank};
+pub use question::{ ChoiceAnswer, Choices, Question };
+pub use sbank::{ SBank, SBankHelper };
 pub use sbdb::SBDB;
 pub use student::Student;

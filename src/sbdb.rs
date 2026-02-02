@@ -1,92 +1,30 @@
+// Copyright 2026 PARK Youngho.
+//
+// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
+// https://www.apache.org/licenses/LICENSE-2.0> or the MIT license
+// <LICENSE-MIT or https://opensource.org/licenses/MIT>, at your option.
+// This file may not be copied, modified, or distributed
+// except according to those terms.
+///////////////////////////////////////////////////////////////////////////////
+
+
+use crate::Excel;
 use crate::SBank;
 use crate::SQLiteDB;
 use crate::Student;
+use calamine::{Reader, DataType}; // Add DataType here
 
 /// A trait defining the database operations for a Student Bank (`SBank`).
 ///
 /// This abstracts the storage mechanism for student data.
 pub trait SBDB
 {
-    // fn open(path: String) -> Option<SQLiteDB>
-    /// Opens a connection to the student database.
-    /// If the path has no extension, `.sbdb` is appended.
-    /// # Arguments
-    /// * `path` - The file path for the database.
-    /// # Output
-    /// `Option<SQLiteDB>` - An optional `SQLiteDB` instance if the connection is successful.    ///
-    /// # Examples
-    /// ```
-    /// use qrate::SQLiteDB;
-    /// use qrate::SBDB;
-    ///
-    /// let db = SQLiteDB::open(":memory:".to_string());
-    /// assert!(db.is_some());
-    /// ```
-    fn open(path: String) -> Option<SQLiteDB>;
-
-    // fn make_table(&self) -> Result<(), String>
-    /// Creates the `tblStudents` table in the database.
-    ///
-    /// # Output
-    /// `Result<(), String>` - `Ok(())` on success, or an error message string on failure.    ///
-    /// # Examples
-    /// ```
-    /// use qrate::SQLiteDB;
-    /// use qrate::SBDB;
-    ///
-    /// let db = SQLiteDB::open(":memory:".to_string()).unwrap();
-    /// let result = db.make_table();
-    /// assert!(result.is_ok());
-    /// ```
+    fn open(path: String) -> Option<Self> where Self: Sized;
     fn make_table(&self) -> Result<(), String>;
-
-    // fn read_sbank(&self) -> Option<SBank>
-    /// Reads the entire `SBank` from the database.
-    ///
-    /// # Output
-    /// `Option<SBank>` - An optional `SBank` containing all students from the database.
-    ///
-    /// # Examples
-    /// ```
-    /// use qrate::SQLiteDB;
-    /// use qrate::SBDB;
-    /// use qrate::Student;
-    ///
-    /// let db = SQLiteDB::open(":memory:".to_string()).unwrap();
-    /// db.make_table().unwrap();
-    /// db.write_sbank(&vec![Student::new("Test Student".to_string(), "123".to_string())]).unwrap();
-    ///
-    /// let sbank = db.read_sbank();
-    /// assert!(sbank.is_some());
-    /// assert_eq!(sbank.unwrap().len(), 1);
-    /// ```
     fn read_sbank(&self) -> Option<SBank>;
-
-    // fn write_sbank(&self, sbank: &SBank) -> Result<(), String>
-    /// Writes an `SBank` to the database.
-    ///
-    /// # Arguments
-    /// * `sbank` - A reference to the `SBank` to be written to the database.
-    /// # Output
-    /// `Result<(), String>` - `Ok(())` on success, or an error message string on failure.
-    ///
-    /// # Examples
-    /// ```
-    /// use qrate::SQLiteDB;
-    /// use qrate::SBDB;
-    /// use qrate::Student;
-    ///
-    /// let db = SQLiteDB::open(":memory:".to_string()).unwrap();
-    /// db.make_table().unwrap();
-    /// let sbank = vec![
-    ///     Student::new("Student One".to_string(), "001".to_string()),
-    ///     Student::new("Student Two".to_string(), "002".to_string()),
-    /// ];
-    /// let result = db.write_sbank(&sbank);
-    /// assert!(result.is_ok());
-    /// ```
-    fn write_sbank(&self, sbank: &SBank) -> Result<(), String>;
+    fn write_sbank(&mut self, sbank: &SBank) -> Result<(), String>;
 }
+
 
 impl SBDB for SQLiteDB
 {
@@ -111,15 +49,11 @@ impl SBDB for SQLiteDB
     /// `Result<(), String>` - `Ok(())` on success, or an error message string on failure.
     fn make_table(&self) -> Result<(), String>
     {
-        let sql = r#"CREATE TABLE tblStudents (
+        let sql = r#"CREATE TABLE IF NOT EXISTS tblStudents (
     name        TEXT NOT NULL,
     id          TEXT NOT NULL
 );"#;
-        match self.conn.execute(sql, [])
-        {
-            Ok(_) => Ok(()),
-            Err(e) => Err(format!("Failed to create table tblStudents!! {}", e.to_string())),
-        }
+        self.conn.execute(sql, []).map(|_| ()).map_err(|e| format!("Failed to create table tblStudents: {}", e))
     }
 
     // fn read_sbank(&self) -> Option<SBank>
@@ -130,32 +64,12 @@ impl SBDB for SQLiteDB
     /// `Option<SBank>` - An optional `SBank` containing all students from the database.
     fn read_sbank(&self) -> Option<SBank>
     {
-        let mut stmt;
-        if let Ok(st) = self.conn.prepare("SELECT * FROM tblStudents;")
-            { stmt = st; }
-        else
-            { return None; }
+        let mut stmt = self.conn.prepare("SELECT * FROM tblStudents;").ok()?;
+        let student_iter = stmt.query_map([], |row| {
+            Ok(Student::new(row.get(0)?, row.get(1)?))
+        }).ok()?;
 
-        let vec_students;
-        if let Ok(vq) = stmt.query_map([], |row| {
-            let name = row.get(0)?;
-            let id = row.get(1)?;
-            Ok(Student::new(name, id))
-        })
-            { vec_students = vq; }
-        else
-            { return None; }
-
-        let mut sbank = SBank::new();
-        for info in vec_students
-        {
-            match info
-            {
-                Ok(s) => sbank.push(s),
-                Err(_) => {}
-            }
-        }
-        Some(sbank)
+        student_iter.collect::<Result<SBank, _>>().ok()
     }
 
     // fn write_sbank(&self, sbank: &SBank) -> Result<(), String>
@@ -166,21 +80,81 @@ impl SBDB for SQLiteDB
     /// * `sbank` - A reference to the `SBank` to be written to the database.
     /// # Output
     /// `Result<(), String>` - `Ok(())` on success, or an error message string on failure.
-    fn write_sbank(&self, sbank: &SBank) -> Result<(), String>
+    fn write_sbank(&mut self, sbank: &SBank) -> Result<(), String>
     {
-        if sbank.len() == 0
-            { return Err("No Students!".to_string()); }
-
-        let sql = "INSERT INTO tblStudents (name, id) values (?1, ?2);";
-        for elem in sbank
+        if sbank.is_empty()
         {
-            let name = elem.get_name();
-            let id = elem.get_id();
-            let params = (name, id);
-            let res = self.conn.execute(sql, params);
-            if let Err(_) = res
-                { return Err("Cannot INSERT INTO tblStudents".to_string()); }
+            return Ok(()); // Nothing to write, which is a success.
         }
-        Ok(())
+
+        let tx = self.conn.transaction().map_err(|e| e.to_string())?;
+        {
+            let mut stmt = tx.prepare("INSERT INTO tblStudents (name, id) VALUES (?1, ?2);").map_err(|e| e.to_string())?;
+            for student in sbank
+                { stmt.execute((student.get_name(), student.get_id())).map_err(|e| format!("Failed to insert student {}: {}", student.get_id(), e))?; }
+        }
+        tx.commit().map_err(|e| e.to_string())
+    }
+}
+
+
+impl SBDB for Excel
+{
+    #[inline]
+    fn open(path: String) -> Option<Self>
+    where Self: Sized
+    {
+        Self::open(path, ".sb.xlsx")
+    }
+
+    /// Creates a new Excel file with a "Students" sheet and headers.
+    fn make_table(&self) -> Result<(), String>
+    {
+        let mut workbook = rust_xlsxwriter::Workbook::new();
+        let sheet = workbook.add_worksheet().set_name("Students").map_err(|e| e.to_string())?;
+        let format = rust_xlsxwriter::Format::new().set_bold();
+
+        sheet.write_string_with_format(0, 0, "Name", &format).map_err(|e| e.to_string())?;
+        sheet.write_string_with_format(0, 1, "ID", &format).map_err(|e| e.to_string())?;
+
+        workbook.save(&self.path).map_err(|e| e.to_string())
+    }
+
+    /// Reads students from the "Students" sheet in an Excel file.
+        fn read_sbank(&self) -> Option<SBank>
+        {
+            let mut excel = calamine::open_workbook_auto(&self.path).ok()?;
+            let range = excel.worksheet_range("Students").ok()?;
+            
+            let mut sbank = SBank::new();
+            for row in range.rows().skip(1) { // Skip header row
+                sbank.push(Student::new(
+                    row.get(0).and_then(|d| d.as_string())?,
+                    row.get(1).and_then(|d| d.as_string())? // Assuming ID is always string or convertible
+                ));
+            }
+            Some(sbank)
+        }
+    
+    /// Writes a collection of students to a "Students" sheet in an Excel file.
+    fn write_sbank(&mut self, sbank: &SBank) -> Result<(), String>
+    {
+        let mut workbook = rust_xlsxwriter::Workbook::new();
+        let sheet = workbook.add_worksheet().set_name("Students").map_err(|e| e.to_string())?;
+        let header_format = rust_xlsxwriter::Format::new().set_bold();
+        
+        // Write header
+        sheet.write_string_with_format(0, 0, "Name", &header_format).map_err(|e| e.to_string())?;
+        sheet.write_string_with_format(0, 1, "ID", &header_format).map_err(|e| e.to_string())?;
+
+        // Write student data
+        for (row_idx, student) in sbank.iter().enumerate()
+        {
+            let row = (row_idx + 1) as u32;
+            sheet.write_string(row, 0, student.get_name()).map_err(|e| e.to_string())?;
+            sheet.write_string(row, 1, student.get_id()).map_err(|e| e.to_string())?;
+        }
+
+        workbook.save(&self.path).map_err(|e| e.to_string())
     }
 }

@@ -1,5 +1,15 @@
-use crate::header::Header;
-use crate::question::Question;
+// Copyright 2026 PARK Youngho.
+//
+// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
+// https://www.apache.org/licenses/LICENSE-2.0> or the MIT license
+// <LICENSE-MIT or https://opensource.org/licenses/MIT>, at your option.
+// This file may not be copied, modified, or distributed
+// except according to those terms.
+///////////////////////////////////////////////////////////////////////////////
+
+
+use crate::Header;
+use crate::Question;
 
 /// Represents a Question Bank, containing a header and a vector of questions.
 #[derive(Clone)]

@@ -1,3 +1,19 @@
+// Copyright 2026 PARK Youngho.
+//
+// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
+// https://www.apache.org/licenses/LICENSE-2.0> or the MIT license
+// <LICENSE-MIT or https://opensource.org/licenses/MIT>, at your option.
+// This file may not be copied, modified, or distributed
+// except according to those terms.
+///////////////////////////////////////////////////////////////////////////////
+
+
+
+use calamine::DataType;
+
+use crate::Question;
+use crate::Choices;
+
 
 /// Represents an Excel file for question bank operations.
 ///
@@ -57,5 +73,33 @@ impl Excel
     pub fn get_path(&self) -> &String
     {
         &self.path
+    }
+    
+    /// Helper function to parse a row from the "Questions" sheet into a `Question` struct.
+    pub(crate) fn parse_question_row(row: &[calamine::Data]) -> Option<Question>
+    {
+        let id = row.get(0).and_then(|d| d.as_f64()).map(|f| f as u16)?;
+        let category = row.get(1).and_then(|d| d.as_f64()).map(|f| f as u8)?;
+        let question_text = row.get(2).and_then(|d| d.as_string())?;
+        
+        let mut choices = Choices::new();
+        for choice_pair in row.get(3..).unwrap_or(&[]).chunks(2)
+        {
+            let choice_text = choice_pair.get(0).and_then(|d| d.get_string()).map(|s| s.to_string()).unwrap_or_default();
+            let is_answer = choice_pair.get(1).and_then(|d| d.get_bool()).unwrap_or_else(|| {
+                choice_pair.get(1).and_then(|d| d.get_string())
+                    .map_or(false, |s| s.eq_ignore_ascii_case("TRUE"))
+            });
+
+            if !choice_text.is_empty() || is_answer
+            {
+                choices.push((choice_text, is_answer));
+            }
+            else
+            {
+                break;
+            }
+        }
+        Some(Question::new(id, category, question_text, choices))
     }
 }
