@@ -2,6 +2,7 @@ use crate::header::Header;
 use crate::question::Question;
 
 /// Represents a Question Bank, containing a header and a vector of questions.
+#[derive(Clone)]
 pub struct QBank
 {
     header: Header,
@@ -22,6 +23,7 @@ impl QBank
     /// let qbank = QBank::new_empty();
     /// assert!(qbank.get_bank().is_empty());
     /// ```
+    #[inline]
     pub fn new_empty() -> Self
     {
         QBank
@@ -40,9 +42,10 @@ impl QBank
     /// # Examples
     /// ```
     /// use qrate::QBank;
-    /// let qbank = QBank::new_with_Default();
+    /// let qbank = QBank::new_with_default();
     /// assert_eq!(qbank.get_header().get_title(), "Examination");
     /// ```
+    #[inline]
     pub fn new_with_default() -> Self
     {
         QBank
@@ -65,9 +68,10 @@ impl QBank
     /// ```
     /// use qrate::{ QBank, Header };
     /// let custom_header = Header::new_empty();
-    /// let qbank = QBank::new_with_Header(custom_header);
+    /// let qbank = QBank::new_with_header(custom_header);
     /// assert!(qbank.get_bank().is_empty());
     /// ```
+    #[inline]
     pub fn new_with_header(header: Header) -> Self
     {
         QBank
@@ -86,9 +90,10 @@ impl QBank
     /// # Examples
     /// ```
     /// use qrate::QBank;
-    /// let qbank = QBank::new_with_Default();
+    /// let qbank = QBank::new_with_default();
     /// assert_eq!(qbank.get_header().get_title(), "Examination");
     /// ```
+    #[inline]
     pub fn get_header(&self) -> &Header
     {
         &self.header
@@ -109,6 +114,7 @@ impl QBank
     /// qbank.set_header(new_header);
     /// assert_eq!(qbank.get_header().get_title(), "My Custom Exam");
     /// ```
+    #[inline]
     pub fn set_header(&mut self, header: Header)
     {
         self.header = header;
@@ -127,6 +133,7 @@ impl QBank
     /// qbank.push_question(Question::new_empty());
     /// assert_eq!(qbank.get_bank().len(), 1);
     /// ```
+    #[inline]
     pub fn get_bank(&self) -> &Vec<Question>
     {
         &self.bank
@@ -145,6 +152,7 @@ impl QBank
     /// qbank.set_bank(vec![Question::new_empty(), Question::new_empty()]);
     /// assert_eq!(qbank.get_bank().len(), 2);
     /// ```
+    #[inline]
     pub fn set_bank(&mut self, bank: Vec<Question>)
     {
         self.bank = bank;
@@ -162,6 +170,7 @@ impl QBank
     /// # Examples
     /// ```
     /// use qrate::{ QBank, Question };
+    /// 
     /// let mut qbank = QBank::new_empty();
     /// qbank.push_question(Question::new(1, 1, "Test Q".to_string(), vec![]));
     /// assert_eq!(qbank.get_question(1).unwrap().get_id(), 1);
@@ -189,6 +198,7 @@ impl QBank
     /// qbank.push_question(question);
     /// assert_eq!(qbank.get_bank().len(), 1);
     /// ```
+    #[inline]
     pub fn push_question(&mut self, question: Question)
     {
         self.bank.push(question);

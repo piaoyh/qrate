@@ -2,12 +2,13 @@
 ///
 /// This struct holds information like the title of the exam, author's name,
 /// categories of questions, and general notices.
+#[derive(Clone)]
 pub struct Header
 {
     title: String,
     name: String,
     id: String,
-    category: Vec<String>,
+    categories: Vec<String>,
     notice: String,
 }
 
@@ -34,7 +35,7 @@ impl Header
             title: String::new(),
             name: String::new(),
             id: String::new(),
-            category: Vec::<String>::new(),
+            categories: Vec::<String>::new(),
             notice: String::new(),
         }
     }
@@ -63,7 +64,7 @@ impl Header
             title: "Examination".to_string(),
             name: "Name".to_string(),
             id: "ID".to_string(),
-            category: vec!["Type A".to_string(), "Type B".to_string()],
+            categories: vec!["Type A".to_string(), "Type B".to_string()],
             notice: r#"Notice:
 * All the questions should be considered, understood and interpreted in the context of the software engineering course you learned. Otherwise, the questions may or may not make sense.
 * Type A: Multiple Choice 1 – you have to choose one answer from the list.
@@ -103,9 +104,9 @@ impl Header
     /// );
     /// assert_eq!(header.get_title(), "Math Quiz");
     /// ```
-    pub fn new(title: String, name: String, id: String, category: Vec<String>, notice: String) -> Self
+    pub fn new(title: String, name: String, id: String, categories: Vec<String>, notice: String) -> Self
     {
-        Self { title, name, id, category, notice }
+        Self { title, name, id, categories, notice }
     }
 
     // pub fn get_title(&self) -> &String
@@ -152,7 +153,7 @@ impl Header
     /// # Examples
     /// ```
     /// use qrate::Header;
-    /// let header = Header::new_with_Default();
+    /// let header = Header::new_with_default();
     /// assert_eq!(header.get_name(), "Name");
     /// ```
     pub fn get_name(&self) -> &String
@@ -187,7 +188,7 @@ impl Header
     /// # Examples
     /// ```
     /// use qrate::Header;
-    /// let header = Header::new_with_Default();
+    /// let header = Header::new_with_default();
     /// assert_eq!(header.get_id(), "ID");
     /// ```
     pub fn get_id(&self) -> &String
@@ -227,7 +228,7 @@ impl Header
     /// ```
     pub fn get_categories(&self) -> &Vec<String>
     {
-        &self.category
+        &self.categories
     }
 
     // pub fn get_category(&self, idx: usize) -> Option<&String>
@@ -242,14 +243,14 @@ impl Header
     /// # Examples
     /// ```
     /// use qrate::Header;
-    /// let header = Header::new_with_Default();
+    /// let header = Header::new_with_default();
     /// assert_eq!(header.get_category(0), Some(&"Type A".to_string()));
     /// assert_eq!(header.get_category(99), None);
     /// ```
     pub fn get_category(&self, idx: usize) -> Option<&String>
     {
-        if idx < self.category.len()
-            { Some(&self.category[idx]) }
+        if idx < self.categories.len()
+            { Some(&self.categories[idx]) }
         else
             { None }
     }
@@ -267,9 +268,9 @@ impl Header
     /// header.set_categories(vec!["Category A".to_string()]);
     /// assert_eq!(header.get_categories().len(), 1);
     /// ```
-    pub fn set_categories(&mut self, category: Vec<String>)
+    pub fn set_categories(&mut self, categories: Vec<String>)
     {
-        self.category = category;
+        self.categories = categories;
     }
 
     // pub fn push_category(&mut self, q_type: String)
@@ -287,7 +288,7 @@ impl Header
     /// ```
     pub fn push_category(&mut self, q_type: String)
     {
-        self.category.push(q_type);
+        self.categories.push(q_type);
     }
 
     // pub fn get_notice(&self) -> &String

@@ -1,6 +1,7 @@
 use crate::get_bank;
 
 /// Represents a student with a name and an ID.
+#[derive(Clone)]
 pub struct Student
 {
     name: String,

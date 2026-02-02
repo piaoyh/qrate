@@ -2,6 +2,7 @@ pub type ChoiceAnswer = (String, bool);
 pub type Choices = Vec<ChoiceAnswer>;
 
 /// Represents a single question with its properties.
+#[derive(Clone)]
 pub struct Question
 {
     id: u16,      // 1-based unique identifier.
@@ -25,6 +26,7 @@ impl Question
     /// assert_eq!(question.get_id(), 0);
     /// assert_eq!(question.get_question(), "");
     /// ```
+    #[inline]
     pub fn new_empty() -> Self
     {
         Self
@@ -55,6 +57,7 @@ impl Question
     /// assert_eq!(question.get_id(), 1);
     /// assert_eq!(question.get_question(), "What is Rust?");
     /// ```
+    #[inline]
     pub fn new(id: u16, category: u8, question: String, choices: Choices) -> Self
     {
         Self { id, category, question, choices }
@@ -72,6 +75,7 @@ impl Question
     /// let question = Question::new_empty();
     /// assert_eq!(question.get_id(), 0);
     /// ```
+    #[inline]
     pub fn get_id(&self) -> u16
     {
         self.id
@@ -90,6 +94,7 @@ impl Question
     /// question.set_id(5);
     /// assert_eq!(question.get_id(), 5);
     /// ```
+    #[inline]
     pub fn set_id(&mut self, id: u16)
     {
         self.id = id;
@@ -107,6 +112,7 @@ impl Question
     /// let question = Question::new_empty();
     /// assert_eq!(question.get_category(), 1);
     /// ```
+    #[inline]
     pub fn get_category(&self) -> u8
     {
         self.category
@@ -125,6 +131,7 @@ impl Question
     /// question.set_category(2); // Multi-choice
     /// assert_eq!(question.get_category(), 2);
     /// ```
+    #[inline]
     pub fn set_category(&mut self, category: u8)
     {
         self.category = category;
@@ -142,6 +149,7 @@ impl Question
     /// let question = Question::new(1, 1, 1, "Hello".to_string(), vec![]);
     /// assert_eq!(question.get_question(), "Hello");
     /// ```
+    #[inline]
     pub fn get_question(&self) -> &String
     {
         &self.question
@@ -160,6 +168,7 @@ impl Question
     /// question.set_question("New Question Text".to_string());
     /// assert_eq!(question.get_question(), "New Question Text");
     /// ```
+    #[inline]
     pub fn set_question(&mut self, question: String)
     {
         self.question = question;
@@ -202,6 +211,7 @@ impl Question
     /// question.push_choice(("Option A".to_string(), false));
     /// assert_eq!(question.get_choices().len(), 1);
     /// ```
+    #[inline]
     pub fn push_choice(&mut self, choice: ChoiceAnswer)
     {
         self.choices.push(choice);
@@ -219,6 +229,7 @@ impl Question
     /// let question = Question::new(1, 1, "Q".to_string(), vec![("A".to_string(), false), ("B".to_string(), false)]);
     /// assert_eq!(question.get_choices().len(), 2);
     /// ```
+    #[inline]
     pub fn get_choices(&self) -> &Choices
     {
         &self.choices
@@ -237,6 +248,7 @@ impl Question
     /// question.set_choices(vec![("New A".to_string(), false), ("New B".to_string(), false)]);
     /// assert_eq!(question.get_choices().len(), 2);
     /// ```
+    #[inline]
     pub fn set_choices(&mut self, choices: Choices)
     {
         self.choices = choices;
