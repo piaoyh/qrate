@@ -4,12 +4,12 @@ use qrate::{ Header, Question, QBank, Choices };
 fn main()
 {
     let vector = vec![
-        (OldQuestionBank::new_is().convert_old_into_new(), "/home/youngho/shared/Information_Security"),
-        (OldQuestionBank::new_cprog().convert_old_into_new(), "/home/youngho/shared/C_Programming"),
-        (OldQuestionBank::new_oop().convert_old_into_new(), "/home/youngho/shared/CPP_Programming"),
-        (OldQuestionBank::new_dsa().convert_old_into_new(), "/home/youngho/shared/Data_Structure_and_Algorithms"),
-        (OldQuestionBank::new_se().convert_old_into_new(), "/home/youngho/shared/Software_Engineering"),
-        (OldQuestionBank::new_mis().convert_old_into_new(), "/home/youngho/shared/Management_Information_Systems"),
+        (OldQuestionBank::new_is().convert_old_into_new(), "./Information_Security"),
+        (OldQuestionBank::new_cprog().convert_old_into_new(), "./C_Programming"),
+        (OldQuestionBank::new_oop().convert_old_into_new(), "./CPP_Programming"),
+        (OldQuestionBank::new_dsa().convert_old_into_new(), "./Data_Structure_and_Algorithms"),
+        (OldQuestionBank::new_se().convert_old_into_new(), "./Software_Engineering"),
+        (OldQuestionBank::new_mis().convert_old_into_new(), "./Management_Information_Systems"),
     ];
 
     for (qbank, path) in vector

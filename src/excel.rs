@@ -49,11 +49,7 @@ impl Excel
     /// ```
     pub(crate) fn open(path: String, extention: &str) -> Option<Self>
     {
-        let p = match path.find('.')
-        {
-            Some(_) => path,
-            None => path + extention,
-        };
+        let p = path + "." + extention;
         Some(Self { path: p })
     }
 

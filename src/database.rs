@@ -45,12 +45,7 @@ impl SQLiteDB
     /// ```
     pub(crate) fn open(path: String, extention: &str) -> Option<Self>
     {
-        let p = match path.find('.')
-        {
-            Some(_) => path,
-            None => path + extention,
-        };
-
+        let p = path + "." + extention;
         if let Ok(con) = Connection::open(&p)
             { Some(Self { path: p, conn: con }) }
         else
