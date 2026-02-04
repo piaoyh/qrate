@@ -37,14 +37,17 @@ pub mod student;
 
 pub mod shuffler;
 
+pub mod generator;
+
 pub use database::SQLiteDB;
 pub use excel::Excel;
 pub use header::Header;
 // pub use loader::load_question_bank_from_csv;
 pub use qbank::QBank;
 pub use qbdb::QBDB;
-pub use question::{ ChoiceAnswer, Choices, Question };
+pub use question::{ ChoiceAnswer, Choices, Question, Questions };
 pub use sbank::{ SBank, SBankHelper };
 pub use sbdb::SBDB;
-pub use student::Student;
-pub use shuffler::ShuffledQuestion;
+pub use student::{ Student, Students };
+pub use shuffler::{ ShuffledQuestion, ShuffledQuestions, ShuffledQSet, ShuffledQSets};
+pub use generator::Generator;

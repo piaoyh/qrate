@@ -7,9 +7,10 @@
 // except according to those terms.
 ///////////////////////////////////////////////////////////////////////////////
 
+pub type Students = Vec::<Student>;
 
 /// Represents a student with a name and an ID.
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct Student
 {
     name: String,

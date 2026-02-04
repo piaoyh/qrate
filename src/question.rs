@@ -10,6 +10,7 @@
 
 pub type ChoiceAnswer = (String, bool);
 pub type Choices = Vec<ChoiceAnswer>;
+pub type Questions = Vec<Question>;
 
 /// Represents a single question with its properties.
 #[derive(Clone)]
@@ -19,7 +20,7 @@ pub struct Question
     group: u16,     // The questions that belong to the same group will not appear in an exam set.
     category: u8,   // 1-based category: 1 for single choice, 2 for multiple choice, 3 for short answer.
     question: String,   // The text of the question
-    choices: Choices,   // For category 3, choice[0] or get_choice(1) is the answer.
+    choices: Choices,   // For category 3, choice[0].0 or get_choice(1).0 is the answer.
 }
 
 impl Question
@@ -42,8 +43,8 @@ impl Question
     {
         Self
         {
-            id: 0,
-            group: 0,
+            id: 1,
+            group: 1,
             category: 1,
             question: String::new(),
             choices: Choices::new(),
@@ -54,9 +55,9 @@ impl Question
     /// Creates a new `Question` instance with the given properties.
     ///
     /// # Arguments
-    /// * `id` - The unique identifier for the question.
+    /// * `id` - The unique identifier for the question, 1-based.
     /// * `group` - The questions that belong to the same group will not appear in an exam set.
-    /// * `category` - The category of the question (e.g., 1 for single choice, 2 for multiple choice).
+    /// * `category` - The category of the question (e.g., 1 for single choice, 2 for multiple choice), 1-based.
     /// * `question` - The text of the question.
     /// * `choices` - A vector of `ChoiceAnswer` tuples for the question.
     ///
@@ -80,7 +81,7 @@ impl Question
     /// Gets the ID of the question.
     ///
     /// # Output
-    /// `u16` - The ID of the question.
+    /// `u16` - The ID of the question, 1-based.
     ///
     /// # Examples
     /// ```
@@ -98,7 +99,7 @@ impl Question
     /// Sets the ID of the question.
     ///
     /// # Arguments
-    /// * `id` - The new ID for the question.
+    /// * `id` - The new ID for the question, 1-based.
     ///
     /// # Examples
     /// ```
@@ -154,7 +155,7 @@ impl Question
     /// Gets the category of the question.
     ///
     /// # Output
-    /// `u8` - The category of the question.
+    /// `u8` - The category of the question, 1-based.
     ///
     /// # Examples
     /// ```
@@ -172,7 +173,7 @@ impl Question
     /// Sets the category of the question.
     ///
     /// # Arguments
-    /// * `category` - The new category for the question.
+    /// * `category` - The new category for the question, 1-based.
     ///
     /// # Examples
     /// ```

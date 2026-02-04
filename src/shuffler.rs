@@ -2,28 +2,153 @@
 // use std::io;
 // use std::fs::File;
 // use std::io::Write;
-// use cryptocol::random::Slapdash as PRNG;
+use cryptocol::random::Slapdash as PRNG;
 
-// use crate::{QBank, Student};
+use crate::{ QBank, Question, Questions, Student };
 
-const NUMBER_CHOICES: usize = 4;
+
 // const NUMBER_QUESTIONS: usize = 48; // 51;
 pub const NUMBER_SELECTED_QUESTIONS: usize = 25;
 // const SAVE_PAPER_SPACE: &str = "";  // "\t"
 
+pub type ShuffledQuestions = Vec::<ShuffledQuestion>;
+pub type ShuffledQSets = Vec::<ShuffledQSet>;
 
-#[derive(Debug)]
+
+#[derive(Debug, Clone)]
 pub struct ShuffledQuestion
 {
-    question: u16,    // 1-based
-    choice: [u8; NUMBER_CHOICES],
+    question: u16,      // 1-based
+    choices: Vec<u8>,   // 1-based
 }
 
 impl ShuffledQuestion
 {
-    pub fn question(&self) -> u16       { self.question }
-    pub fn choice(&self, num: u8) -> u8 { self.choice[(num - 1) as usize] }
+    pub fn new(question: u16, number_of_choices: u8) -> Self
+    {
+        let mut choices = Vec::new();
+        for i in 1..=number_of_choices
+            { choices.push(i); }
+        ShuffledQuestion { question, choices }
+    }
+
+    pub fn get_question(&self) -> u16
+    {
+        self.question
+    }
+
+    pub fn set_question(&mut self, question: u16)
+    {
+        self.question = question;
+    }
+
+    pub fn get_choice(&self, idx: usize) -> u8
+    {
+        if idx <= self.choices.len() as usize
+            { self.choices[idx as usize] }
+        else
+            { 0 }
+    }
+
+    pub fn set_choice(&mut self, idx: usize, choice: u8)
+    {
+        self.choices[idx] = choice;
+    }
+
+    pub fn get_choices(&mut self) -> &Vec<u8>
+    {
+        &self.choices
+    }
+
+    pub fn set_choices(&mut self, choices: Vec<u8>)
+    {
+        self.choices = choices;
+    }
+
+    pub fn how_many_choices(&self) -> usize
+    {
+        self.choices.len()
+    }
+
+    pub fn shuffle(&mut self)
+    {
+        let mut prng = PRNG::new();
+        let max = self.how_many_choices();
+        for _ in 0..3
+        {
+            for i in 0..max
+            {
+                let j = prng.random_under_uint_(max);
+                (self.choices[i], self.choices[j]) = (self.choices[j], self.choices[i]);
+            }
+        }
+    }
 }
+
+
+#[derive(Debug, Clone)]
+pub struct ShuffledQSet
+{
+    student: Student,
+    questions: ShuffledQuestions,
+}
+
+impl ShuffledQSet
+{
+    pub fn new(qbank: &QBank, student: &Student, start: u16, end: u16) -> Option<Self>
+    {
+        let last = qbank.get_questions().len() as u16;
+        if (start > end) || (start > last) || (end > last)
+            { return None }
+
+        let mut questions = ShuffledQuestions::new();
+        for question in (start - 1)..(end - 1)
+        {
+            let number_of_choices = qbank.get_question(question as usize).unwrap().get_choices().len() as u8;
+            let mut shuffled_question = ShuffledQuestion::new(question, number_of_choices);
+            shuffled_question.shuffle();
+            questions.push(shuffled_question);
+        }
+
+        Some(Self{ student: student.clone(), questions })
+    }
+
+    pub fn shuffle(&mut self)
+    {
+        let mut prng = PRNG::new();
+        let max = self.questions.len();
+        for _ in 0..3
+        {
+            for i in 0..max
+            {
+                let j = prng.random_under_uint_(max);
+                (self.questions[i], self.questions[j]) = (self.questions[j].clone(), self.questions[i].clone());
+            }
+        }
+    }
+
+    pub fn get_student(&self) -> Student
+    {
+        self.student.clone()
+    }
+
+    pub fn set_student(&mut self, student: &Student)
+    {
+        self.student = student.clone();
+    }
+
+    pub fn get_shuffled_questions(&self) -> ShuffledQuestions
+    {
+        self.questions.clone()
+    }
+
+    pub fn set_shuffled_questions(&mut self, questions: ShuffledQuestions)
+    {
+        self.questions = questions;
+    }
+}
+
+
 /*
 pub struct Exam
 {
@@ -43,178 +168,6 @@ impl Exam
         e.init_bank();
         e.select_questions();
         return e;
-    }
-
-    pub fn exam(&mut self)
-    {
-        let mut number: u8 = 1;
-        let mut score: i8 = 0;
-        for selected in &self.selected_qb
-        {
-            let qb = &self.qbs[(selected.question()-1) as usize];
-            println!("{}. {}", number, qb.question());
-            for ch in 1..=4
-            {
-                println!("\t{}) {}", ch, qb.choice(selected.choice(ch)));
-            }
-            number += 1;
-            println!("");
-            let (mut answer1, mut answer2) = qb.answer();
-            if (answer1 != 0) && (answer2 != 0) && (answer1 > answer2)
-            {
-                (answer1, answer2) = (answer2, answer1);
-            }
-            let answer1 = answer1;
-            let answer2 = answer2;
-            let mut txt = String::new();
-            io::stdin().read_line(&mut txt).expect("Not proper input");
-            txt = txt.trim().to_string();
-            if txt.len() < 1
-            {
-                txt = " ".to_string();
-            }
-            let txt1 = &txt[..1];
-            let mut ans1 = match txt1.parse::<u8>()
-            {
-                Err(_) => { println!("{} cannot be answer.", txt); 0u8},
-                Ok(digit) => digit as u8,
-            };
-            ans1 =  if ans1 > 4         { println!("{} cannot be answer.", ans1); 0 }
-                    else if ans1 == 0   { 0 }
-                    else                { selected.choice[(ans1-1) as usize] };
-            if qb.has_multianswers()
-            {
-                if txt.len() < 3
-                {
-                    println!("You should had chosen two answers.");
-                    if ans1 == answer1 || ans1 == answer2
-                    {
-                        score += 0;
-                    }
-                    else
-                    {
-                        score += -3;
-                    };
-                    /////
-                    let mut a = 1u8;
-                    let mut b = 1u8;
-                    let mut c = a;
-                    for i in selected.choice
-                    {
-                        if i == answer1 || i == answer2
-                        {
-                            if a == b
-                            {
-                                c = a;
-                                b += 1;
-                                continue;
-                            }
-                            println!("The answers are {} and {}.", c, b);
-                            break;
-                        }
-                        a += 1;
-                        b += 1;
-                    }
-                    /////
-                    println!("Your score is {} points at the moment!", score);
-                    println!("\n-------------------------------------\n");
-                    /////
-                    continue;
-                }
-                let txt2 = &txt[2..].trim();
-                let mut ans2 = match txt2.parse::<u8>()
-                {
-                    Err(_) => { println!("{} cannot be answer.", txt); 0},
-                    Ok(digit) => digit,
-                };
-                ans2 =  if ans2 > 4         { println!("{} cannot be answer.", ans2); 0 }
-                        else if ans2 == 0   { 0 }
-                        else                { selected.choice[(ans2-1) as usize] };
-                if ans1 > ans2
-                {
-                    (ans1, ans2) = (ans2, ans1);
-                }
-                let ans1 = ans1;
-                let ans2 = ans2;
-                if ans1 == ans2
-                {
-                    println!("You should had chosen two answers.");
-                    if ans1 == answer1 || ans1 == answer2
-                    {
-                        score += 0;
-                    }
-                    else
-                    {
-                        score += -3;
-                    };
-                }
-                else if ans1 == answer1 && ans2 == answer2
-                {
-                    println!("Both answers are Correct!");
-                    score += 3;
-                }
-                else if ans1 != answer1 && ans2 != answer2
-                {
-                    println!("Both answers are Incorrect!");
-                    score -= 3;
-                }
-                else
-                {
-                    println!("One answer is Correct but the other answer is Incorrect!");
-                    score += 0;
-                }
-                /////
-                let mut a = 1u8;
-                let mut b = 1u8;
-                let mut c = a;
-                for i in selected.choice
-                {
-                    if i == answer1 || i == answer2
-                    {
-                        if a == b
-                        {
-                            c = a;
-                            b += 1;
-                            continue;
-                        }
-                        println!("The answers are {} and {}.", c, b);
-                        break;
-                    }
-                    a += 1;
-                    b += 1;
-                }
-                /////
-            }
-            else
-            {
-                let ans1 = ans1;
-                if ans1 == answer1
-                {
-                    println!("Correct!");
-                    score += 3;
-                }
-                else
-                {
-                    println!("Incorrect!");
-                    score -= 1;
-                }
-                let mut a = 1u8;
-                for i in selected.choice
-                {
-                    if i == answer1
-                    {
-                        println!("The answer is {}.", a);
-                        break;
-                    }
-                    a += 1;
-                }
-            }
-            /////
-            println!("Your score is {} points at the moment!", score);
-            println!("\n-------------------------------------\n");
-            /////
-        }
-        println!("You've got {} points!", score);
     }
 
     fn initialize_selected_questions(&self) -> [u16; NUMBER_QUESTIONS]
@@ -348,7 +301,7 @@ impl Exam
         println!("\n");
     }
 
-    // fn write_exams(&mut self, students: &Vec::<Student>) -> (String, String)
+    // fn write_exams(&mut self, students: &Students) -> (String, String)
     // {
     //     let mut paper = String::new();
     //     let mut card = String::new();
@@ -365,14 +318,14 @@ impl Exam
     //     return (paper, card);
     // }
 
-    pub fn print_exams(&mut self, students: &Vec::<Student>)
+    pub fn print_exams(&mut self, students: &Students)
     {
         let (paper, card) = self.write_exams(&students);
         println!("{}", paper);
         println!("{}", card);
     }
 
-    pub fn save_exams(&mut self, students: &Vec::<Student>, path: &str)
+    pub fn save_exams(&mut self, students: &Students, path: &str)
     {
         let (paper, card) = self.write_exams(&students);
         let mut f = File::create(&path).unwrap();
