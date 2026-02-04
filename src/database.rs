@@ -8,6 +8,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 
+use std::path::Path;
 use rusqlite::{ Connection, Error };
 
 /// Represents an SQLite database connection.
@@ -25,11 +26,12 @@ pub struct SQLiteDB
 
 impl SQLiteDB
 {
-    // pub(crate) fn open(path: String, extention: &str) -> Option<Self>
+    // pub fn open_with_ext(path: String, extention: &str) -> Option<Self>
     /// Opens a new connection to an SQLite database.
     ///
     /// # Arguments
     /// * `path` - The path to the database file.
+    /// * `extention` - The file extension to append if the path does not have one.
     ///
     /// # Output
     /// An `Option<Self>` which is `Some(SQLiteDB)` on successful connection, or `None` on failure.
@@ -40,14 +42,18 @@ impl SQLiteDB
     ///
     /// // Using an in-memory database for the example.
     /// // In a real scenario, you would provide a file path.
-    /// let db = SQLiteDB::open(":memory:".to_string());
+    /// let db = SQLiteDB::open(":memory:".to_string(), "db");
     /// assert!(db.is_some());
     /// ```
-    pub(crate) fn open(path: String, extention: &str) -> Option<Self>
+    pub fn open_with_ext(path: String, extention: &str) -> Option<Self>
     {
-        let p = path + "." + extention;
-        if let Ok(con) = Connection::open(&p)
-            { Some(Self { path: p, conn: con }) }
+        let obj = Path::new(&path);
+        let extended_path = if obj.extension().and_then(|s| s.to_str()) == Some(extention)
+            { path }
+        else
+            { format!("{}.{}", path, extention) };
+        if let Ok(con) = Connection::open(&extended_path)
+            { Some(Self { path: extended_path, conn: con }) }
         else
             { None }
     }
@@ -62,7 +68,7 @@ impl SQLiteDB
     /// ```
     /// use qrate::SQLiteDB;
     ///
-    /// let db = SQLiteDB::open(":memory:".to_string()).unwrap();
+    /// let db = SQLiteDB::open(":memory:".to_string(), ".db").unwrap();
     /// let result = db.close();
     /// assert!(result.is_ok());
     /// ```
@@ -84,15 +90,14 @@ impl SQLiteDB
     /// # Examples
     /// ```
     /// use qrate::SQLiteDB;
-    /// use rusqlite::Connection;
     ///
-    /// let mut db = SQLiteDB { path: "".to_string(), conn: Connection::open_in_memory().unwrap() };
-    /// db.set_path("new_path.db".to_string());
+    /// let mut db = SQLiteDB::open(":memory:".to_string(), ".db").unwrap();
+    /// db.set_path("new_path".to_string());
     /// assert_eq!(db.get_path(), "new_path.db");
     /// ```
     pub fn set_path(&mut self, path: String)
     {
-        self.path = path;
+        self.path = path + ".db"; // Appending .db for consistency
     }
 
     // pub fn get_path(&self) -> &String
@@ -104,9 +109,8 @@ impl SQLiteDB
     /// # Examples
     /// ```
     /// use qrate::SQLiteDB;
-    /// use rusqlite::Connection;
     ///
-    /// let db = SQLiteDB { path: "my_db.db".to_string(), conn: Connection::open_in_memory().unwrap() };
+    /// let db = SQLiteDB::open("my_db".to_string(), ".db").unwrap();
     /// assert_eq!(db.get_path(), "my_db.db");
     /// ```
     pub fn get_path(&self) -> &String
@@ -125,7 +129,7 @@ impl SQLiteDB
     /// use qrate::SQLiteDB;
     /// use rusqlite::Connection;
     ///
-    /// let mut db = SQLiteDB { path: "".to_string(), conn: Connection::open_in_memory().unwrap() };
+    /// let mut db = SQLiteDB::open(":memory:".to_string(), ".db").unwrap();
     /// let new_conn = Connection::open_in_memory().unwrap();
     /// db.set_connection(new_conn);
     /// // You can't directly compare connections, but you can check if it's not null/default if applicable.
@@ -146,9 +150,8 @@ impl SQLiteDB
     /// # Examples
     /// ```
     /// use qrate::SQLiteDB;
-    /// use rusqlite::Connection;
     ///
-    /// let db = SQLiteDB { path: "".to_string(), conn: Connection::open_in_memory().unwrap() };
+    /// let db = SQLiteDB::open(":memory:".to_string(), ".db").unwrap();
     /// let conn_ref = db.get_connection();
     /// assert!(conn_ref.is_autocommit());
     /// ```

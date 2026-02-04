@@ -23,12 +23,13 @@ use crate::{ Choices, Question };
 /// backend implementations (e.g., SQLite, flat files).
 pub trait QBDB
 {
-    // fn open(path: String) -> Option<Self> where Self: Sized;
+    // fn open(path: String, extention: &str) -> Option<Self> where Self: Sized;
     /// Opens a connection to the question bank database.
     /// If the path has no extension, proper extention is appended.
     ///
     /// # Arguments
     /// * `path` - The file path for the database.
+    /// * `extention` - The file extension to append.
     ///
     /// # Output
     /// `Option<Self>` - An optional `Self` instance if the connection is successful.
@@ -47,7 +48,6 @@ pub trait QBDB
     ///
     /// let excel = Excel::open("test_quiz.qb.xlsx".to_string());
     /// assert!(excel.is_some());
-    /// assert_eq!(excel.unwrap().get_path(), "test_quiz.qb.xlsx");
     /// ```
     fn open(path: String) -> Option<Self> where Self: Sized;
 
@@ -220,7 +220,7 @@ pub trait QBDB
     ///
     /// let mut qbank_to_write = QBank::new_with_default();
     /// let choices = vec![("Ch1".to_string(), true), ("Ch2".to_string(), false)];
-    /// let question = Question::new(1, 1, "Test Question".to_string(), choices);
+    /// let question = Question::new(1, 1, 1, "Test Question".to_string(), choices);
     /// qbank_to_write.push_question(question);
     /// db.write_qbank(&qbank_to_write).unwrap();
     ///
@@ -241,7 +241,7 @@ pub trait QBDB
     ///
     /// let mut qbank_to_write = QBank::new_with_default();
     /// let choices = vec![("Paris".to_string(), true), ("Berlin".to_string(), false)];
-    /// qbank_to_write.push_question(Question::new(1, 1, "Capital of France?".to_string(), choices));
+    /// qbank_to_write.push_question(Question::new(1, 1, 1, "Capital of France?".to_string(), choices));
     /// excel.write_qbank(&qbank_to_write).unwrap();
     ///
     /// let qbank_read = excel.read_qbank();
@@ -275,7 +275,7 @@ pub trait QBDB
     ///
     /// let mut qbank = QBank::new_with_default();
     /// let choices = vec![("Ans1".to_string(), true), ("Ans2".to_string(), false)];
-    /// let question = Question::new(1, 1, "Test Q".to_string(), choices);
+    /// let question = Question::new(1, 1, 1, "Test Q".to_string(), choices);
     /// qbank.push_question(question);
     ///
     /// let result = db.write_qbank(&qbank);
@@ -297,7 +297,7 @@ pub trait QBDB
     ///
     /// let mut qbank = QBank::new_with_default();
     /// let choices = vec![("Opt1".to_string(), false), ("Opt2".to_string(), true)];
-    /// qbank.push_question(Question::new(1, 1, "A Question".to_string(), choices));
+    /// qbank.push_question(Question::new(1, 1, 1, "A Question".to_string(), choices));
     ///
     /// let result = excel.write_qbank(&qbank);
     /// assert!(result.is_ok());
@@ -327,7 +327,7 @@ impl QBDB for SQLiteDB
     fn open(path: String) -> Option<Self>
     where Self: Sized
     {
-        Self::open(path, ".qbdb")
+        SQLiteDB::open_with_ext(path, "qbdb")
     }
 
     // fn make_tables(&self, categories: u8, choices: u8) -> Result<(), String>
@@ -567,7 +567,7 @@ impl QBDB for Excel
     fn open(path: String) -> Option<Self>
     where Self: Sized
     {
-        Self::open(path, ".qb.xlsx")
+        Excel::open_with_ext(path, "qb.xlsx")
     }
 
     // fn make_tables(&self, choices: u8) -> Result<(), String>

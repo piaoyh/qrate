@@ -1,261 +1,213 @@
 use std::io;
 
-use qrate::{ SQLiteDB, Excel, QBDB };
-use qrate::{ Header, Question, QBank, Choices };
+use qrate::{ SQLiteDB, QBDB };
+use qrate::{ QBank };
 use qrate::Generator;
+
+// Helper function to get user's answers
+fn get_user_answers(expected_count: usize, max_choice: usize) -> Vec<u8>
+{
+    use std::io::Write; // Import Write trait for flush
+
+    loop
+    {
+        let mut input = String::new();
+        if expected_count == 1
+        {
+            print!("Enter your answer (1-{}): ", max_choice);
+        }
+        else
+        {
+            print!("Enter {} answers separated by space (1-{}): ", expected_count, max_choice);
+        }
+        
+        // Ensure the prompt is displayed before reading input
+        io::stdout().flush().expect("flush failed!");
+        io::stdin().read_line(&mut input).expect("Failed to read line");
+        let input = input.trim();
+
+        let parsed_answers: Result<Vec<u8>, _> = input
+            .split_whitespace()
+            .map(|s| s.parse::<u8>())
+            .collect();
+
+        match parsed_answers
+        {
+            Ok(mut answers) =>
+            {
+                if answers.len() != expected_count
+                {
+                    println!("Error: Please enter exactly {} answers.", expected_count);
+                    continue;
+                }
+
+                // Check if all answers are within valid range and unique
+                let mut invalid_input = false;
+                for ans in answers.iter()
+                {
+                    if *ans == 0 || (*ans as usize) > max_choice
+                    {
+                        println!("Error: Answer '{}' is out of valid range (1-{}).", ans, max_choice);
+                        invalid_input = true;
+                        break;
+                    }
+                }
+                if invalid_input
+                {
+                    continue;
+                }
+
+                // Check for duplicate answers if multiple answers are expected
+                if expected_count > 1
+                {
+                    answers.sort_unstable(); // Sort to easily check for duplicates
+                    for i in 0..(answers.len() - 1)
+                    {
+                        if answers[i] == answers[i+1]
+                        {
+                            println!("Error: Duplicate answers are not allowed.");
+                            invalid_input = true;
+                            break;
+                        }
+                    }
+                }
+                if invalid_input
+                {
+                    continue;
+                }
+                
+                return answers;
+            },
+            Err(_) =>
+            {
+                println!("Error: Invalid input. Please enter numbers separated by spaces.");
+                continue;
+            }
+        }
+    }
+}
+
 
 fn main()
 {
-    let mut db = SQLiteDB::open("./Information_Security".to_string()).unwrap();
+    let db = SQLiteDB::open("./Information_Security".to_string())
+        .expect("Failed to open database. Make sure 'Information_Security.qbdb' exists.");
     let qbank;
     if let Some(qb) = db.read_qbank()
     {
         let last = qb.get_questions().len() as u16;
-        let mut generator = Generator::new_one_set(&qb, 1, last).unwrap();
-        qbank = generator.get_shuffled_qbank(0).unwrap();
+        if last == 0 {
+            println!("Error: The QBank is empty. No questions to display.");
+            return;
+        }
+        let generator = Generator::new_one_set(&qb, 1, last)
+            .expect("Failed to create generator for QBank.");
+        qbank = generator.get_shuffled_qbank(0)
+            .expect("Failed to get shuffled QBank from generator. Ensure question range is valid.")
+            .1; // We only need QBank, not Student
     }
     else
     {
-        println!("error = {}", e);
+        println!("Error: Could not read QBank from database. Ensure it's not empty or corrupted.");
         return;
     }
 
-    exam(&(qbank.1));
+    exam(&qbank);
 }
 
 pub fn exam(qbank: &QBank)
 {
     let categories = qbank.get_header().get_categories();
-    let mut number: u8 = 1;
     let mut score: i8 = 0;
     let note = qbank.get_header().get_notice();
     println!("{}", note);
-    for question in qbank.get_questions()
+
+    for (question_idx, question) in qbank.get_questions().iter().enumerate()
     {
-        let id = question.get_id();
-        let cat = categories[question.get_category() as usize - 1];
-        print!("{}. [{}]   ", id, cat);
-        println!("{}", question.get_question());
-        let mut answers = 0;
-        let last = question.get_choices().len();
-        for choice_number in 1..=last
+        let question_number = question_idx + 1;
+        let _id = question.get_id(); // Original ID (changed id to _id)
+        let cat = &categories[question.get_category() as usize - 1];
+
+        println!("{}. [{}]   {}", question_number, cat, question.get_question());
+
+        let mut correct_answers_count = 0;
+        let mut correct_answer_numbers = Vec::new(); // Store 1-based indices of correct choices
+        let max_choice = question.get_choices().len(); // Maximum valid choice number
+
+        for (choice_number, choice) in question.get_choices().iter().enumerate()
         {
-            let cho = question.get_choice(choice_number).unwrap();
-            println!("\t{}) {}", choice_number, cho.0);
-            if cho.1
-                { answers += 1; }
+            let current_choice_num = choice_number + 1;
+            println!("\t{}) {}", current_choice_num, choice.0);
+            if choice.1
+            {
+                correct_answers_count += 1;
+                correct_answer_numbers.push(current_choice_num as u8);
+            }
         }
         println!("");
 
-        if answers == 1
-            { println!("Enter {} answer bellow.", answers); }
-        else
-            { println!("Enter {} answers bellow", answers); }
+        // Get user's answers using the helper function
+        let mut user_answers = get_user_answers(correct_answers_count, max_choice);
+        user_answers.sort_unstable(); // Sort user's answers for easy comparison
+        correct_answer_numbers.sort_unstable(); // Sort correct answers for easy comparison
 
-        let mut entered = Vec::new();
-        for i in 1..answers
+        // Calculate score
+        if correct_answers_count == 1
         {
-            match i % 10
+            if user_answers[0] == correct_answer_numbers[0]
             {
-                1 => { println!("Enter {}-st answer.", i); },
-                2 => { println!("Enter {}-nd answer.", i); },
-                3 => { println!("Enter {}-rd answer.", i); },
-                _ => { println!("Enter {}-th answer.", i); }
-            }
-            let mut text = String::new();
-            while let Err(e) = io::stdin().read_line(&mut text)
-                { println!("Not proper input! Enter proper answer!"); }
-            text = text.trim().to_string();
-            let ans = text.parse::<u8>().unwrap();
-            entered.push((ans, false));
-        }
-
-        let mut found = false;
-        let mut repetition = true;
-        for i in 1..=question.get_choices().len()
-        {
-            for j in 1..=entered.len()
-            {
-                if question.get_choice(i).1 && ans == i as u8
-                {
-                    found = true;
-                    break;
-                        }
-                        else if !question.get_choice(i).1 && ans == i as u8
-                        {
-                            found = false;
-                            break;
-                        }
-                    }
-                }
-
-            }
-                2 => {
-                    let mut found = false;
-                    let mut going = true;
-                    while going
-                    {
-                        for i in 1..=question.get_choices().len()
-                        {
-                            let txt = text.split_whitespace().into_iter();
-                            let ans = txt.next().or(Some("0")).unwrap();
-                            let ans = ans.parse::<u8>().unwrap();
-                            if question.get_choice(i).1 && ans == i as u8
-                            {
-                                found = true;
-                                break;
-                            }
-                            else if !question.get_choice(i).1 && ans == i as u8
-                            {
-                                found = false;
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-            repetition = false;
-        }
-        
-        let mut ans1 = match txt1.parse::<u8>()
-        {
-            Err(_) => { println!("{} is not the answer.", txt); 0u8},
-            Ok(digit) => digit as u8,
-        };
-        ans1 =  if ans1 > last as u8    { println!("{} cannot be answer.", ans1); 0 }
-                else if ans1 == 0       { 0 }
-                else                { selected.choice[(ans1-1) as usize] };
-        if qb.has_multianswers()
-        {
-            if txt.len() < 3
-            {
-                println!("You should had chosen two answers.");
-                if ans1 == answer1 || ans1 == answer2
-                {
-                    score += 0;
-                }
-                else
-                {
-                    score += -3;
-                };
-                /////
-                let mut a = 1u8;
-                let mut b = 1u8;
-                let mut c = a;
-                for i in selected.choice
-                {
-                    if i == answer1 || i == answer2
-                    {
-                        if a == b
-                        {
-                            c = a;
-                            b += 1;
-                            continue;
-                        }
-                        println!("The answers are {} and {}.", c, b);
-                        break;
-                    }
-                    a += 1;
-                    b += 1;
-                }
-                /////
-                println!("Your score is {} points at the moment!", score);
-                println!("\n-------------------------------------\n");
-                /////
-                continue;
-            }
-            let txt2 = &txt[2..].trim();
-            let mut ans2 = match txt2.parse::<u8>()
-            {
-                Err(_) => { println!("{} cannot be answer.", txt); 0},
-                Ok(digit) => digit,
-            };
-            ans2 =  if ans2 > 4         { println!("{} cannot be answer.", ans2); 0 }
-                    else if ans2 == 0   { 0 }
-                    else                { selected.choice[(ans2-1) as usize] };
-            if ans1 > ans2
-            {
-                (ans1, ans2) = (ans2, ans1);
-            }
-            let ans1 = ans1;
-            let ans2 = ans2;
-            if ans1 == ans2
-            {
-                println!("You should had chosen two answers.");
-                if ans1 == answer1 || ans1 == answer2
-                {
-                    score += 0;
-                }
-                else
-                {
-                    score += -3;
-                };
-            }
-            else if ans1 == answer1 && ans2 == answer2
-            {
-                println!("Both answers are Correct!");
+                println!("Correct!");
                 score += 3;
             }
-            else if ans1 != answer1 && ans2 != answer2
-            {
-                println!("Both answers are Incorrect!");
-                score -= 3;
-            }
             else
             {
-                println!("One answer is Correct but the other answer is Incorrect!");
-                score += 0;
+                println!("Incorrect!");
+                score -= 1;
             }
-            /////
-            let mut a = 1u8;
-            let mut b = 1u8;
-            let mut c = a;
-            for i in selected.choice
-            {
-                if i == answer1 || i == answer2
-                {
-                    if a == b
-                    {
-                            c = a;
-                            b += 1;
-                            continue;
-                        }
-                        println!("The answers are {} and {}.", c, b);
-                        break;
-                    }
-                    a += 1;
-                    b += 1;
-                }
-                /////
-            }
-            else
-            {
-                let ans1 = ans1;
-                if ans1 == answer1
-                {
-                    println!("Correct!");
-                    score += 3;
-                }
-                else
-                {
-                    println!("Incorrect!");
-                    score -= 1;
-                }
-                let mut a = 1u8;
-                for i in selected.choice
-                {
-                    if i == answer1
-                    {
-                        println!("The answer is {}.", a);
-                        break;
-                    }
-                    a += 1;
-                }
-            }
-            /////
-            println!("Your score is {} points at the moment!", score);
-            println!("\n-------------------------------------\n");
-            /////
+            println!("The answer is {}.", correct_answer_numbers[0]);
         }
-        println!("You've got {} points!", score);
+        else // multiple answers
+        {
+            if user_answers == correct_answer_numbers
+            {
+                println!("All answers are Correct!");
+                score += 3;
+            }
+            else
+            {
+                let mut correct_matches = 0;
+                for ans in user_answers.iter()
+                {
+                    if correct_answer_numbers.contains(ans)
+                    {
+                        correct_matches += 1;
+                    }
+                }
+
+                if correct_matches == 0
+                {
+                    println!("All answers are Incorrect!");
+                    score -= 3;
+                }
+                else // correct_matches == 1
+                {
+                    println!("One answer is Correct but the other answer is Incorrect!");
+                    score += 0;
+                }
+            }
+            // For multiple answers, display all correct answers.
+            print!("The answers are ");
+            for (i, ans) in correct_answer_numbers.iter().enumerate() {
+                if i > 0 {
+                    print!(", ");
+                }
+                print!("{}", ans);
+            }
+            println!(".");
+        }
+
+        println!("Your score is {} points at the moment!", score);
+        println!("\n-------------------------------------\n");
     }
+    println!("You've got {} points!", score);
+}

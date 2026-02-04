@@ -182,7 +182,7 @@ impl QBank
     /// use qrate::{ QBank, Question };
     /// 
     /// let mut qbank = QBank::new_empty();
-    /// qbank.push_question(Question::new(1, 1, "Test Q".to_string(), vec![]));
+    /// qbank.push_question(Question::new(1, 1, 1, "Test Q".to_string(), vec![]));
     /// assert_eq!(qbank.get_question(1).unwrap().get_id(), 1);
     /// assert!(qbank.get_question(2).is_none());
     /// ```
@@ -228,7 +228,7 @@ impl QBank
     /// ```
     /// use qrate::{ QBank, Question };
     /// let mut qbank = QBank::new_empty();
-    /// let question = Question::new(1, 1, "Q1".to_string(), vec![("Choice A".to_string(), false), ("Choice B".to_string(), false)]);
+    /// let question = Question::new(1, 1, 1, "Q1".to_string(), vec![("Choice A".to_string(), false), ("Choice B".to_string(), false)]);
     /// qbank.push_question(question);
     /// assert_eq!(qbank.get_choice(1, 1).unwrap(), "Choice A");
     /// assert!(qbank.get_choice(1, 3).is_none());

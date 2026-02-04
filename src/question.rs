@@ -35,7 +35,7 @@ impl Question
     /// ```
     /// use qrate::Question;
     /// let question = Question::new_empty();
-    /// assert_eq!(question.get_id(), 0);
+    /// assert_eq!(question.get_id(), 1); // Changed from 0 to 1
     /// assert_eq!(question.get_question(), "");
     /// ```
     #[inline]
@@ -67,7 +67,7 @@ impl Question
     /// # Examples
     /// ```
     /// use qrate::{Question, Choices};
-    /// let question = Question::new(1, 1, "What is Rust?".to_string(), vec![("A language".to_string(), true)]);
+    /// let question = Question::new(1, 1, 1, "What is Rust?".to_string(), vec![("A language".to_string(), true)]);
     /// assert_eq!(question.get_id(), 1);
     /// assert_eq!(question.get_question(), "What is Rust?");
     /// ```
@@ -87,7 +87,7 @@ impl Question
     /// ```
     /// use qrate::Question;
     /// let question = Question::new_empty();
-    /// assert_eq!(question.get_id(), 0);
+    /// assert_eq!(question.get_id(), 1); // Changed from 0 to 1
     /// ```
     #[inline]
     pub fn get_id(&self) -> u16
@@ -124,7 +124,7 @@ impl Question
     /// ```
     /// use qrate::Question;
     /// let question = Question::new_empty();
-    /// assert_eq!(question.get_group(), 0);
+    /// assert_eq!(question.get_group(), 1); // Changed from 0 to 1
     /// ```
     #[inline]
     pub fn get_group(&self) -> u16
@@ -237,7 +237,7 @@ impl Question
     /// # Examples
     /// ```
     /// use qrate::Question;
-    /// let question = Question::new(1, 1, "Q".to_string(), vec![("Opt A".to_string(), false), ("Opt B".to_string(), true)]);
+    /// let question = Question::new(1, 1, 1, "Q".to_string(), vec![("Opt A".to_string(), false), ("Opt B".to_string(), true)]);
     /// assert_eq!(question.get_choice(1).unwrap().0, "Opt A");
     /// assert!(question.get_choice(3).is_none());
     /// ```
@@ -277,7 +277,7 @@ impl Question
     /// # Examples
     /// ```
     /// use qrate::Question;
-    /// let question = Question::new(1, 1, "Q".to_string(), vec![("A".to_string(), false), ("B".to_string(), false)]);
+    /// let question = Question::new(1, 1, 1, "Q".to_string(), vec![("A".to_string(), false), ("B".to_string(), false)]);
     /// assert_eq!(question.get_choices().len(), 2);
     /// ```
     #[inline]

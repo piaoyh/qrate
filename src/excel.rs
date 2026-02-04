@@ -9,6 +9,7 @@
 
 
 
+use std::path::Path;
 use calamine::DataType;
 
 use crate::Question;
@@ -27,30 +28,35 @@ pub struct Excel
 
 impl Excel
 {
-    // pub(crate) fn open(path: String, extention: &str) -> Option<Self>
+    // pub fn open(path: String, extention: &str) -> Option<Self>
     /// Creates a new `Excel` instance with a given path.
     ///
     /// # Arguments
     /// * `path` - The file path for the Excel workbook.
+    /// * `extention` - The file extension to append if the path does not have one.
     ///
     /// # Output
     /// An `Option<Self>` containing the `Excel` instance.
     /// 
     /// # Features
-    /// If the path does not have an extension, `.xlsx` is appended.
+    /// If the path does not have an extension, `extention` is appended.
     ///
     /// # Examples
     /// ```
     /// use qrate::Excel;
     ///
-    /// let excel_handler = Excel::open("my_quiz.xlsx".to_string(), ".qb.xlsx");
+    /// let excel_handler = Excel::open("my_quiz".to_string(), ".qb.xlsx");
     /// assert!(excel_handler.is_some());
-    /// assert_eq!(excel_handler.unwrap().get_path(), "my_quiz.xlsx");
+    /// assert_eq!(excel_handler.unwrap().get_path(), "my_quiz.qb.xlsx");
     /// ```
-    pub(crate) fn open(path: String, extention: &str) -> Option<Self>
+    pub fn open_with_ext(path: String, extention: &str) -> Option<Self>
     {
-        let p = path + "." + extention;
-        Some(Self { path: p })
+        let obj = Path::new(&path);
+        let extended_path = if obj.extension().and_then(|s| s.to_str()) == Some(extention)
+            { path }
+        else
+            { format!("{}.{}", path, extention) };
+        Some(Self { path: extended_path })
     }
 
     // pub fn get_path(&self) -> &String
@@ -63,7 +69,7 @@ impl Excel
     /// ```
     /// use qrate::Excel;
     ///
-    /// let db = Excel { path: "my.qb.xlsx".to_string() };
+    /// let db = Excel::open("my".to_string(), ".qb.xlsx").unwrap();
     /// assert_eq!(db.get_path(), "my.qb.xlsx");
     /// ```
     pub fn get_path(&self) -> &String
@@ -71,6 +77,7 @@ impl Excel
         &self.path
     }
     
+    // pub(crate) fn parse_question_row(row: &[calamine::Data]) -> Option<Question>
     /// Parses a single row from an Excel sheet into a `Question` struct.
     ///
     /// This function takes a slice of `calamine::Data` representing a single row
@@ -87,13 +94,16 @@ impl Excel
     ///   an incorrect data type.
     ///
     /// # Examples
-    /// ```
+    /// ```ignore
+    /// // This function is `pub(crate)` and its example cannot be directly tested in `cargo test --doc`.
+    /// // It is typically used internally by `QBDB for Excel` implementations.
     /// use qrate::{Excel, Question, Choices};
     /// use calamine::Data;
     ///
     /// // Simulate a row from an Excel sheet: ID, Category, Question, Choice1, IsAnswer1, Choice2, IsAnswer2
     /// let row_data = vec![
     ///     Data::Float(1.0), // ID
+    ///     Data::Float(1.0), // Group
     ///     Data::Float(10.0), // Category
     ///     Data::String("What is the capital of France?".to_string()), // Question Text
     ///     Data::String("Berlin".to_string()), Data::Bool(false), // Choice 1
@@ -104,6 +114,7 @@ impl Excel
     /// let question = Excel::parse_question_row(&row_data).unwrap();
     ///
     /// assert_eq!(question.get_id(), 1);
+    /// assert_eq!(question.get_group(), 1); // Added group assertion
     /// assert_eq!(question.get_category(), 10);
     /// assert_eq!(question.get_question(), "What is the capital of France?");
     ///

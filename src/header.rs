@@ -63,7 +63,7 @@ impl Header
     /// # Examples
     /// ```
     /// use qrate::Header;
-    /// let header = Header::new_with_Default();
+    /// let header = Header::new_with_default();
     /// assert_eq!(header.get_title(), "Examination");
     /// assert!(!header.get_categories().is_empty());
     /// ```
@@ -128,7 +128,7 @@ impl Header
     /// # Examples
     /// ```
     /// use qrate::Header;
-    /// let header = Header::new_with_Default();
+    /// let header = Header::new_with_default();
     /// assert_eq!(header.get_title(), "Examination");
     /// ```
     pub fn get_title(&self) -> &String
@@ -233,7 +233,7 @@ impl Header
     /// # Examples
     /// ```
     /// use qrate::Header;
-    /// let header = Header::new_with_Default();
+    /// let header = Header::new_with_default();
     /// assert_eq!(header.get_categories().len(), 2);
     /// ```
     pub fn get_categories(&self) -> &Vec<String>
@@ -310,7 +310,7 @@ impl Header
     /// # Examples
     /// ```
     /// use qrate::Header;
-    /// let header = Header::new_with_Default();
+    /// let header = Header::new_with_default();
     /// assert!(header.get_notice().starts_with("Notice:"));
     /// ```
     pub fn get_notice(&self) -> &String
