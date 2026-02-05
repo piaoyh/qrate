@@ -225,11 +225,11 @@ impl Question
         self.question = question;
     }
 
-    // pub fn get_choice(&self, choice: usize) -> Option<&ChoiceAnswer>
+    // pub fn get_choice(&self, choice_number: usize) -> Option<&ChoiceAnswer>
     /// Gets a reference to a choice by its 1-based index.
     ///
     /// # Arguments
-    /// * `choice` - The 1-based index of the choice to retrieve.
+    /// * `choice_number` - The 1-based index of the choice to retrieve.
     ///
     /// # Output
     /// `Option<&ChoiceAnswer>` - An optional reference to the `ChoiceAnswer` at the specified index.
@@ -241,12 +241,25 @@ impl Question
     /// assert_eq!(question.get_choice(1).unwrap().0, "Opt A");
     /// assert!(question.get_choice(3).is_none());
     /// ```
-    pub fn get_choice(&self, choice: usize) -> Option<&ChoiceAnswer>
+    pub fn get_choice(&self, choice_number: usize) -> Option<&ChoiceAnswer>
     {
-        if (choice <= self.choices.len()) && (choice > 0)
-            { Some(&self.choices[choice - 1]) }
+        if (choice_number <= self.choices.len()) && (choice_number > 0)
+            { Some(&self.choices[choice_number - 1]) }
         else
             { None }
+    }
+
+    pub fn set_choice(&mut self, choice_number: usize, choice_answer: ChoiceAnswer) -> bool
+    {
+        if (choice_number <= self.choices.len()) && (choice_number > 0)
+        {
+            self.choices[choice_number - 1] = choice_answer;
+            true
+        }
+        else
+        {
+            false
+        }
     }
 
     // pub fn push_choice(&mut self, choice: ChoiceAnswer)

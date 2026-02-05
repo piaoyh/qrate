@@ -8,6 +8,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 
+use crate::ChoiceAnswer;
 use crate::Header;
 use crate::Question;
 
@@ -168,11 +169,11 @@ impl QBank
         self.questions = questions;
     }
 
-    // pub fn get_question(&self, q_number: usize) -> Option<&Question>
+    // pub fn get_question(&self, question_number: usize) -> Option<&Question>
     /// Gets a reference to a `Question` by its 1-based index.
     ///
     /// # Arguments
-    /// * `q_number` - The 1-based index of the question to retrieve.
+    /// * `question_number` - The 1-based index of the question to retrieve.
     ///
     /// # Output
     /// `Option<&Question>` - An optional reference to the `Question` at the specified index.
@@ -186,10 +187,18 @@ impl QBank
     /// assert_eq!(qbank.get_question(1).unwrap().get_id(), 1);
     /// assert!(qbank.get_question(2).is_none());
     /// ```
-    pub fn get_question(&self, q_number: usize) -> Option<&Question>
+    pub fn get_question(&self, question_number: usize) -> Option<&Question>
     {
-        if (q_number <= self.questions.len()) && q_number > 0
-            { Some(&self.questions[q_number - 1]) }
+        if (question_number <= self.questions.len()) && question_number > 0
+            { Some(&self.questions[question_number - 1]) }
+        else
+            { None }
+    }
+
+    pub fn get_question_mut(&mut self, question_number: usize) -> Option<&mut Question>
+    {
+        if (question_number <= self.questions.len()) && question_number > 0
+            { Some(&mut self.questions[question_number - 1]) }
         else
             { None }
     }
@@ -214,15 +223,15 @@ impl QBank
         self.questions.push(question);
     }
 
-    // pub fn get_choice(&self, q_number: usize, ch_number: usize) -> Option<&String>
-    /// Gets a reference to a choice `String` by question number and choice number (both 1-based).
+    // pub fn get_choice(&self, question_number: usize, choice_number: usize) -> Option<&ChoiceAnswer>
+    /// Gets a reference to a choice `ChoiceAnswer` by question number and choice number (both 1-based).
     ///
     /// # Arguments
-    /// * `q_number` - The 1-based index of the question.
-    /// * `ch_number` - The 1-based index of the choice within the question.
+    /// * `question_number` - The 1-based index of the question.
+    /// * `choice_number` - The 1-based index of the choice within the question.
     ///
     /// # Output
-    /// `Option<&String>` - An optional reference to the choice string.
+    /// `Option<&ChoiceAnswer>` - An optional reference to the `ChoiceAnswer` at the specified index.
     ///
     /// # Examples
     /// ```
@@ -230,19 +239,36 @@ impl QBank
     /// let mut qbank = QBank::new_empty();
     /// let question = Question::new(1, 1, 1, "Q1".to_string(), vec![("Choice A".to_string(), false), ("Choice B".to_string(), false)]);
     /// qbank.push_question(question);
-    /// assert_eq!(qbank.get_choice(1, 1).unwrap(), "Choice A");
+    /// assert_eq!(qbank.get_choice(1, 1).unwrap().0, "Choice A");
+    /// assert_eq!(qbank.get_choice(1, 1).unwrap().1, false);
     /// assert!(qbank.get_choice(1, 3).is_none());
     /// assert!(qbank.get_choice(2, 1).is_none());
     /// ```
-    pub fn get_choice(&self, q_number: usize, ch_number: usize) -> Option<&String>
+    pub fn get_choice(&self, question_number: usize, choice_number: usize) -> Option<&ChoiceAnswer>
     {
-        if (q_number <= self.questions.len()) && q_number > 0
-            { self.questions[q_number - 1].get_choice(ch_number).map(|(text, _is_answer)| text) }
-        else
-            { None }
+        if (question_number <= self.questions.len()) && question_number > 0
+        {
+            let question = self.get_question(question_number)?;
+            let choice_length = question.get_choices().len();
+            if (choice_number <= choice_length) && choice_number > 0
+                { return question.get_choice(choice_number); }
+        }
+        None
     }
 
-    
+    /// ```
+    pub fn set_choice(&mut self, question_number: usize, choice_number: usize, choice_answer: ChoiceAnswer) -> bool
+    {
+        if (question_number <= self.questions.len()) && question_number > 0
+        {
+            let question = self.get_question_mut(question_number).unwrap();
+            let choice_length = question.get_choices().len();
+            if (choice_number <= choice_length) && choice_number > 0
+                { return question.set_choice(choice_number, choice_answer); }
+        }
+        false
+    }
+
     #[inline]
     pub fn get_max_choices(&self) -> usize
     {

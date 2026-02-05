@@ -65,6 +65,7 @@ impl ShuffledQuestion
     /// let sq = ShuffledQuestion::new(5, 4);
     /// assert_eq!(sq.get_question(), 5);
     /// ```
+    #[inline]
     pub fn get_question(&self) -> u16
     {
         self.question
@@ -83,6 +84,7 @@ impl ShuffledQuestion
     /// sq.set_question(2);
     /// assert_eq!(sq.get_question(), 2);
     /// ```
+    #[inline]
     pub fn set_question(&mut self, question: u16)
     {
         self.question = question;
@@ -130,6 +132,7 @@ impl ShuffledQuestion
     /// sq.set_choice(1, 3);
     /// assert_eq!(sq.get_choice(1), 3);
     /// ```
+    #[inline]
     pub fn set_choice(&mut self, idx: usize, choice: u8) -> bool
     {
         if idx == 0
@@ -150,6 +153,7 @@ impl ShuffledQuestion
     /// let mut sq = ShuffledQuestion::new(1, 4);
     /// assert_eq!(sq.get_choices(), &vec![1, 2, 3, 4]);
     /// ```
+    #[inline]
     pub fn get_choices(&self) -> &Vec<u8>
     {
         &self.choices
@@ -168,6 +172,7 @@ impl ShuffledQuestion
     /// sq.set_choices(vec![4, 3, 2, 1]);
     /// assert_eq!(sq.get_choices(), &vec![4, 3, 2, 1]);
     /// ```
+    #[inline]
     pub fn set_choices(&mut self, choices: Vec<u8>)
     {
         self.choices = choices;
@@ -185,6 +190,7 @@ impl ShuffledQuestion
     /// let sq = ShuffledQuestion::new(1, 5);
     /// assert_eq!(sq.how_many_choices(), 5);
     /// ```
+    #[inline]
     pub fn how_many_choices(&self) -> usize
     {
         self.choices.len()
@@ -329,6 +335,7 @@ impl ShuffledQSet
     /// let qset = ShuffledQSet::new(&qbank, &student, 1, 1).unwrap();
     /// assert_eq!(qset.get_student().get_name(), "Test");
     /// ```
+    #[inline]
     pub fn get_student(&self) -> &Student
     {
         &self.student
@@ -352,6 +359,7 @@ impl ShuffledQSet
     /// qset.set_student(&student2);
     /// assert_eq!(qset.get_student().get_name(), "Test2");
     /// ```
+    #[inline]
     pub fn set_student(&mut self, student: &Student)
     {
         self.student = student.clone();
@@ -375,6 +383,7 @@ impl ShuffledQSet
     /// let qset = ShuffledQSet::new(&qbank, &student, 1, 3).unwrap();
     /// assert_eq!(qset.get_shuffled_questions().len(), 3);
     /// ```
+    #[inline]
     pub fn get_shuffled_questions(&self) -> &ShuffledQuestions
     {
         &self.questions
@@ -399,9 +408,16 @@ impl ShuffledQSet
     /// assert_eq!(qset.get_shuffled_questions().len(), 2);
     /// assert_eq!(qset.get_shuffled_questions()[0].get_question(), 10);
     /// ```
+    #[inline]
     pub fn set_shuffled_questions(&mut self, questions: ShuffledQuestions)
     {
         self.questions = questions;
+    }
+
+    #[inline]
+    pub fn get_shuffled_question(&self, question_number: u16) -> Option<&ShuffledQuestion>
+    {
+        if question_number == 0 { None } else { Some(self.questions[question_number - 1]) }
     }
 }
 
