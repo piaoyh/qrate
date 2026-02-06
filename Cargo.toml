@@ -1,7 +1,7 @@
 [package]
 authors = ["PARK Youngho"]
 name = "qrate"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2024"
 keywords = ["quiz", "bank", "examination", "question", "teacher"]
 categories = ["algorithms", "data-structures", "database"]
@@ -17,6 +17,9 @@ cryptocol = "0.19.6"
 rusqlite = { version = "0.38.0", features = ["bundled"] }
 calamine = "0.32.0"
 rust_xlsxwriter = "0.93.0"
+docx-rs = "0.4.18"
+rtf-grimoire = "0.2.1"
+genpdf = "0.2.0"
 
 [profile.dev]
 incremental = false

@@ -414,6 +414,26 @@ impl ShuffledQSet
         self.questions = questions;
     }
 
+    // pub fn get_shuffled_question(&self, question_number: u16) -> Option<&ShuffledQuestion>
+    /// Retrieves a reference to a `ShuffledQuestion` by its 1-based question number.
+    ///
+    /// # Arguments
+    /// * `question_number` - The 1-based index of the question to retrieve.
+    ///
+    /// # Output
+    /// `Option<&ShuffledQuestion>` - An `Option` containing a reference to the `ShuffledQuestion` if found,
+    ///                                 or `None` if the `question_number` is invalid (e.g., 0).
+    ///
+    /// # Examples
+    /// ```
+    /// use qrate::{ QBank, Student, Question, ShuffledQSet, ShuffledQuestion };
+    /// let mut qbank = QBank::new_with_default();
+    /// qbank.push_question(Question::new(1, 1, 1, "Q1".to_string(), vec![]));
+    /// let student = Student::new("Test".to_string(), "123".to_string());
+    /// let qset = ShuffledQSet::new(&qbank, &student, 1, 1).unwrap();
+    /// assert_eq!(qset.get_shuffled_question(1).unwrap().get_question(), 1);
+    /// assert!(qset.get_shuffled_question(0).is_none());
+    /// ```
     #[inline]
     pub fn get_shuffled_question(&self, question_number: u16) -> Option<&ShuffledQuestion>
     {

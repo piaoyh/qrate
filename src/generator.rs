@@ -7,6 +7,13 @@
 // except according to those terms.
 ///////////////////////////////////////////////////////////////////////////////
 
+use std::fs::File;
+use std::io::{self, Write};
+use std::path::Path;
+use docx_rs::*;
+use rtf_grimoire::{Rtf, Style, Doc, Para, part::*};
+use genpdf::*;
+
 use crate::{ Choices, QBank, Questions, ShuffledQSet, ShuffledQSets, Student, Students };
 
 
@@ -255,24 +262,161 @@ impl Generator
         self.origin.get_header().get_notice().clone()
     }
 
+    // pub fn next(&mut self) -> Option<(u16, String, String, Choices)>
+    /// Advances to the next question in the shuffled set and returns its details.
+    ///
+    /// This function acts as an iterator for the generated question set. Each call
+    /// increments the internal question counter and provides the details of the
+    /// next question, including the category, the question text, and the choices
+    /// in their shuffled order.
+    ///
+    /// It is primarily used for self-testing scenarios, such as in the `exam()`
+    /// function found in `src/examples/prep.rs`.
+    ///
+    /// # Output
+    /// `Option<(u16, String, String, Choices)>` - An `Option` containing a tuple with:
+    ///   - `u16`: The current question number within the shuffled set.
+    ///   - `String`: The category of the current question.
+    ///   - `String`: The text of the current question.
+    ///   - `Choices`: A vector of tuples `(String, bool)` representing the
+    ///                shuffled choices and whether each is a correct answer.
+    ///
+    /// Returns `None` if there are no more questions in the set.
+    ///
+    /// # Examples
+    /// ```
+    /// use qrate::{ QBank, Generator, Student, Students };
+    ///
+    /// let mut qbank = QBank::new_empty();
+    /// qbank.add_question_with_choices("Question 1".to_string(), vec![("A".to_string(), true)]);
+    /// qbank.add_question_with_choices("Question 2".to_string(), vec![("B".to_string(), true)]);
+    ///
+    /// let mut generator = Generator::new_one_set(&qbank, 1, 2).unwrap();
+    ///
+    /// if let Some((num, cat, q_text, choices)) = generator.next()
+    ///     { assert_eq!(num, 1); }  // The actual question text depends on the shuffled order.
+    ///
+    /// if let Some((num, cat, q_text, choices)) = generator.next()
+    ///     { assert_eq!(num, 2); }
+    ///
+    /// assert!(generator.next().is_none());
+    /// ```
     pub fn next(&mut self) -> Option<(u16, String, String, Choices)>
     {
         self.current_question_number += 1;
-        let real_question_number = self.shuffled_qsets[0].get_shuffled_question(self.current_question_number)?.get_question() as usize;
-        let category = self.origin.get_header().get_category( real_question_number)?.clone();
-        let question = self.origin.get_question(real_question_number)?.get_question().clone();
-        let choices: Choices = self.origin.get_ch(real_question_number);
-        // 제미나이야! 이 함수를 만들어 줘. 이 함수는 /src/examples/prep.rs에서
-        // 학생이 셀프 테스트를 할 때에 쓰이는 exam() 함수에서 쓰일 함수야.
-        // 반환값은 튜플을 Option으로 감싼 형태인데,
-        // 그 튜플은 다음과 같이 구성되어 있어.
-        // 현재의 문제 번호(self.current_question_number),
-        // 현재의 문제의 카테고리 스트링(변수는 category),
-        // 현재의 문제의 문제 스트링(변수는 question),
-        // 현재의 문제의 선택지와 정답 여부의 튜플의 벡터(변수는 choices)로
-        // 튜플이 구성되어 있어.
-        // 그리고,이 함수를 호출할 때마다 다음 문제로 넘어가서 해당 반환값을 반환해.
-        // 이 함수를 완성한 다음에는 독스트링도 만들어 줘.
-        Some((self.current_question_number, category, question, choices))
+
+        let shuffled_qset = self.shuffled_qsets.get(0)?;
+        if self.current_question_number as usize > shuffled_qset.get_shuffled_questions().len()
+            { return None; }
+
+        let shuffled_question = shuffled_qset.get_shuffled_question(self.current_question_number)?;
+        let real_question_number = shuffled_question.get_question();
+        let shuffled_indices = shuffled_question.get_choices();
+
+        let origin_question = self.origin.get_question(real_question_number as usize)?;
+        let category = self.origin.get_header().get_category(real_question_number as usize)?.clone();
+        let question_text = origin_question.get_question().clone();
+        let origin_choices = origin_question.get_choices();
+
+        let mut choices = Choices::new();
+        for &shuffled_index in shuffled_indices
+        {
+            if let Some(choice) = origin_choices.get((shuffled_index - 1) as usize)
+                { choices.push(choice.clone()); }
+            else
+                { return None; }
+        }
+
+        Some((self.current_question_number, category, question_text, choices))
+    }
+
+    // pub fn save_shuffled_exams(&self, path: String) -> Result<(), String>
+    /// Saves the shuffled exam sets for all students to a single file.
+    ///
+    /// The output format is determined by the file extension of the provided path.
+    /// Supported formats are: .txt, .rtf, .docx, and .pdf.
+    /// This function delegates the actual saving process to format-specific private functions.
+    ///
+    /// # Arguments
+    /// * `path` - The file path where the exams will be saved.
+    ///
+    /// # Output
+    /// `Result<(), String>` - Returns `Ok(())` on success, or an `Err` with a
+    ///                        `String` describing the error on failure.
+    pub fn save_shuffled_exams(&self, path: String) -> Result<(), String>
+    {
+        let file_path = Path::new(&path);
+        match file_path.extension().and_then(|s| s.to_str())
+        {
+            Some("txt") => self.save_shuffled_exams_in_txt(file_path),
+            Some("rtf") => self.save_shuffled_exams_in_rtf(file_path),
+            Some("docx") => self.save_shuffled_exams_in_docx(file_path),
+            Some("pdf") => self.save_shuffled_exams_in_pdf(file_path),
+            _ => Err("Unsupported file format. Please use .txt, .rtf, .docx, or .pdf.".to_string()),
+        }
+    }
+
+    /// Saves the shuffled exam sets to a text file.
+    fn save_shuffled_exams_in_txt(&self, path: &Path) -> Result<(), String>
+    {
+        let mut file = File::create(path).map_err(|e| e.to_string())?;
+        // TODO: Implement the actual logic to write content to the txt file.
+        // For now, it just creates an empty file.
+        writeln!(file, "TODO: Implement TXT saving logic.").map_err(|e| e.to_string())?;
+        Ok(())
+    }
+
+    /// Saves the shuffled exam sets to an RTF file.
+    fn save_shuffled_exams_in_rtf(&self, path: &Path) -> Result<(), String>
+    {
+        let mut file = File::create(path).map_err(|e| e.to_string())?;
+        // TODO: Implement the actual logic to generate and write RTF content.
+        // For now, it just creates an empty file with a placeholder.
+        let mut doc = Doc::new();
+        doc.push_para(Para::new().push_text("TODO: Implement RTF saving logic."));
+        file.write_all(doc.to_bytes().as_slice()).map_err(|e| e.to_string())?;
+        Ok(())
+    }
+
+    /// Saves the shuffled exam sets to a DOCX file.
+    fn save_shuffled_exams_in_docx(&self, path: &Path) -> Result<(), String>
+    {
+        let file = File::create(path).map_err(|e| e.to_string())?;
+        // TODO: Implement the actual logic to generate and write DOCX content.
+        // For now, it just creates an empty file with a placeholder.
+        let docx = Docx::new().add_paragraph(Paragraph::new().add_run(Run::new().add_text("TODO: Implement DOCX saving logic.")));
+        docx.build().pack(file).map_err(|e| e.to_string())?;
+        Ok(())
+    }
+
+    /// Saves the shuffled exam sets to a PDF file.
+    fn save_shuffled_exams_in_pdf(&self, path: &Path) -> Result<(), String>
+    {
+        // TODO: Implement the actual logic to generate and write PDF content.
+        // For now, it just creates an empty file with a placeholder.
+        let font_family = genpdf::fonts::from_files("./fonts", "LiberationSans", None)
+            .map_err(|e| format!("Failed to load font: {}", e))?;
+        let mut doc = genpdf::Document::new(font_family);
+        doc.push(genpdf::elements::Paragraph::new("TODO: Implement PDF saving logic."));
+        doc.render_to_file(path).map_err(|e| e.to_string())?;
+        Ok(())
     }
 }
+
+// * 기능
+// ** 각각의 학생들의 시험 세트를 path 파일 이름의 확장자에 따라 다른 문서 포맷으로 path 파일 이름의 하나의 파일에 한꺼번에 저장한다.
+// * 저장하려는 파일 포맷에 대한 지시 사항
+// ** 페이지를 나눌 수 있는 포맷이라면, 다음 학생의 시험 세트를 쓸 때에는 다음 페이지에서 시작한다.
+// ** 글꼴의 크기를 정할 수 있는 포맷에 대한 지시 시항
+// *** 시험의 타이틀 즉, Header::title의 내용은 14 포인트로 한다.
+// *** 시험의 주의사항 즉, Header::notice의 내용은 11 포인트로 한다.
+// *** 그 외의 것들은 모두 11 포인트로 한다.
+// ** 줄간격은 한 줄 간격으로 한다.
+// ** 문제와 문제 사이에는 기본적으로 하나의 빈 줄들을 삽입한다.
+// ** 하나의 문제가 두 페이지로 나뉘지 않도록 필요한 경우, 문제와 문제 사이에 복수의 빈 줄들을 삽입한다.
+
+// * 함수를 만듦에 있어서의 지시사항
+// ** save_shuffled_exams_in_txt(), save_shuffled_exams_in_rtf(),
+// save_shuffled_exams_in_docx(), save_shuffled_exams_in_pdf() 함수들도
+// 너무 길게 만들지 말고 기능 별로 쪼개서 private 함수들을 만들고, 이를 호출한다.
+// ** 공통되는 기능은 하나의 함수를 만들어 여러 함수들에서 이를 호출한다.

@@ -8,46 +8,33 @@ use qrate::Generator;
 fn main()
 {
     let db = SQLiteDB::open("./Information_Security".to_string()).expect("Failed to open database. Make sure 'Information_Security.qbdb' exists.");
-    let qbank;
-    if let Some(qb) = db.read_qbank()
+    let qb = db.read_qbank().expect("Error: Could not read QBank from database. Ensure it's not empty or corrupted.");
+    let last = qb.get_questions().len() as u16;
+    if last == 0
     {
-        let last = qb.get_questions().len() as u16;
-        if last == 0
-        {
-            println!("Error: The QBank is empty. No questions to display.");
-            return;
-        }
-        let generator = Generator::new_one_set(&qb, 1, last).expect("Failed to create generator for QBank.");
-        qbank = generator.get_shuffled_qbank(0).expect("Failed to get shuffled QBank from generator. Ensure question range is valid.").1; // We only need QBank, not Student
-    }
-    else
-    {
-        println!("Error: Could not read QBank from database. Ensure it's not empty or corrupted.");
+        println!("Error: The QBank is empty. No questions to display.");
         return;
     }
-    exam(&qbank);
+    let mut generator = Generator::new_one_set(&qb, 1, last).expect("Failed to create generator for QBank.");
+    exam(&mut generator);
 }
 
-pub fn exam(qbank: &QBank)
+pub fn exam(generator: &mut Generator)
 {
-    let categories = qbank.get_header().get_categories();
+    // let categories = generator.origin.get_header().get_categories(); // 'cat' is now provided by generator.next()
     let mut score: i8 = 0;
-    let note = qbank.get_header().get_notice();
+    let note = generator.get_notice();
     println!("{}", note);
 
-    for (question_idx, question) in qbank.get_questions().iter().enumerate()
+    while let Some((question_number, cat, question_text, choices)) = generator.next()
     {
-        let question_number = question_idx + 1;
-        let _id = question.get_id(); // Original ID (changed id to _id)
-        let cat = &categories[question.get_category() as usize - 1];
-
-        println!("{}. [{}]   {}", question_number, cat, question.get_question());
+        println!("{}. [{}]   {}", question_number, cat, question_text);
 
         let mut correct_answers_count = 0;
         let mut correct_answer_numbers = Vec::new(); // Store 1-based indices of correct choices
-        let max_choice = question.get_choices().len(); // Maximum valid choice number
+        let max_choice = choices.len(); // Maximum valid choice number
 
-        for (choice_number, choice) in question.get_choices().iter().enumerate()
+        for (choice_number, choice) in choices.iter().enumerate()
         {
             let current_choice_num = choice_number + 1;
             println!("\t{}) {}", current_choice_num, choice.0);
