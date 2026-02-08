@@ -1,5 +1,5 @@
 # qrate: A Rust Library for Examination Generation
-`qrate` is a core engine designed to help educators generate unique examination sets effortlessly, making cheating significantly more difficult. `qrate` is also powered by colaboration of HI (Human Intelligence)-coding and AI (Artificial Intelligence)-coding.
+`qrate` is a core engine designed to help educators effortlessly generate unique examination sets, making academic dishonesty significantly more difficult. Developed through a synergy of Human Intelligence (HI) and Artificial Intelligence (AI), every line of code in this crate reflects both AI-driven efficiency and rigorous human craftsmanship.
 
 ## Background
 Teachers and lecturers often struggle with the integrity of exams. In environments where academic dishonesty is a concern, preventing students from copying from one another is a constant challenge.

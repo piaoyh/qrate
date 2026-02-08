@@ -1,9 +1,6 @@
 use std::io;
 
-use qrate::{ SQLiteDB, QBDB };
-use qrate::{ QBank };
-use qrate::Generator;
-
+use qrate::{ SQLiteDB, QBDB, Generator };
 
 fn main()
 {
@@ -15,7 +12,7 @@ fn main()
         println!("Error: The QBank is empty. No questions to display.");
         return;
     }
-    let mut generator = Generator::new_one_set(&qb, 1, last).expect("Failed to create generator for QBank.");
+    let mut generator = Generator::new_one_set(&qb, 1, last, last as usize).expect("Failed to create generator for QBank.");
     exam(&mut generator);
 }
 

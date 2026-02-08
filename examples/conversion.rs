@@ -1,8 +1,36 @@
-use qrate::{ SQLiteDB, Excel, QBDB };
+
 use qrate::{ Header, Question, QBank, Choices };
+use qrate::{ Student, SBank };
 
 fn main()
 {
+    make_student_db();
+    make_qbank_db();
+}
+
+fn make_student_db()
+{
+    use qrate::{ Excel, SBDB, SQLiteDB };
+    
+    let mut students = SBank::new();
+    students.push(Student::new("Антон Алексеевич Куликов".to_string(), "1".to_string()));
+    students.push(Student::new("Артём Андреевич Слётов".to_string(), "2".to_string()));
+    students.push(Student::new("Ислам Элгарович Мамбетказиев".to_string(), "3".to_string()));
+    students.push(Student::new("Ханыль  Лим".to_string(), "4".to_string()));
+
+    let mut db = SQLiteDB::open("./Students".to_string()).unwrap();
+    if let Err(e) = db.write_sbank(&students)
+        { println!("error = {}", e); }
+
+    let mut db = Excel::open("./Students".to_string()).unwrap();
+    if let Err(e) = db.write_sbank(&students)
+        { println!("error = {}", e); }
+}
+
+fn make_qbank_db()
+{
+    use qrate::{ Excel, QBDB, SQLiteDB };
+
     let vector = vec![
         (OldQuestionBank::new_is().convert_old_into_new(), "./Information_Security"),
         (OldQuestionBank::new_cprog().convert_old_into_new(), "./C_Programming"),
@@ -23,7 +51,6 @@ fn main()
             { println!("error = {}", e); }
     }
 }
-
 
 
 const NUMBER_CHOICES: usize = 4;

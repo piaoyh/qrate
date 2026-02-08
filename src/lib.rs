@@ -16,33 +16,40 @@
 
 /// The `database` module provides the `SQLiteDB` for database interactions.
 pub mod database;
+
 /// The `excel` module provides functionalities for Excel file operations.
 pub mod excel;
+
 /// The `header` module contains the `Header` structure for parsing file headers.
 pub mod header;
-// /// The `loader` module provides functions to load data from files.
-// pub mod loader;
+
 /// The `qbank` module contains the `QBank` structure and its associated methods.
 pub mod qbank;
+
 /// The `qbdb` module handles the question bank database operations.
 pub mod qbdb;
+
 /// The `question` module defines the `Question` structure.
 pub mod question;
+
 /// The `sbank` module contains the `SBank` structure and related functionalities.
 pub mod sbank;
+
 /// The `sbdb` module handles the student bank database operations.
 pub mod sbdb;
+
 /// The `student` module defines the `Student` structure.
 pub mod student;
 
+/// The `shuffler` module provides functionalities for shuffling questions and creating shuffled sets.
 pub mod shuffler;
 
+/// The `generator` module provides functionalities for generating various exam formats.
 pub mod generator;
 
 pub use database::SQLiteDB;
 pub use excel::Excel;
 pub use header::Header;
-// pub use loader::load_question_bank_from_csv;
 pub use qbank::QBank;
 pub use qbdb::QBDB;
 pub use question::{ ChoiceAnswer, Choices, Question, Questions };
@@ -51,3 +58,34 @@ pub use sbdb::SBDB;
 pub use student::{ Student, Students };
 pub use shuffler::{ ShuffledQuestion, ShuffledQuestions, ShuffledQSet, ShuffledQSets};
 pub use generator::Generator;
+
+
+// pub(crate) fn check_path(path: String, extention: &str) -> String
+/// Checks if the given path has the specified extension. If not, it appends the extension.
+///
+/// # Arguments
+/// * `path` - The original file path.
+/// * `extention` - The desired file extension (e.g., "txt", "docx").
+///
+/// # Output
+/// `String` - The path with the correct extension.
+///
+/// # Examples
+/// ```
+/// use qrate::check_path;
+///
+/// let path1 = "document.docx".to_string();
+/// let checked_path1 = check_path(path1, "docx");
+/// assert_eq!(checked_path1, "document.docx");
+///
+/// let path2 = "document".to_string();
+/// let checked_path2 = check_path(path2, "docx");
+/// assert_eq!(checked_path2, "document.docx");
+/// ```
+pub(crate) fn check_path(path: String, extention: &str) -> String
+{
+    if std::path::Path::new(&path).extension().and_then(|s| s.to_str()) == Some(extention)
+        { path }
+    else
+        { format!("{}.{}", path, extention) }
+}

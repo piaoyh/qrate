@@ -1,20 +1,24 @@
 // Copyright 2026 PARK Youngho.
 //
 // Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
-// https://www.apache.org/licenses/LICENSE-200> or the MIT license
+// https://www.apache.org/licenses/LICENSE-2.0> or the MIT license
 // <LICENSE-MIT or https://opensource.org/licenses/MIT>, at your option.
 // This file may not be copied, modified, or distributed
 // except according to those terms.
 ///////////////////////////////////////////////////////////////////////////////
 
 use std::fs::File;
-use std::io::{self, Write};
+use std::io::Write;
 use std::path::Path;
-use docx_rs::*;
-use rtf_grimoire::{Rtf, Style, Doc, Para, part::*};
-use genpdf::*;
 
-use crate::{ Choices, QBank, Questions, ShuffledQSet, ShuffledQSets, Student, Students };
+use docx_rs::{ Docx, Paragraph, Run, BreakType, PageMargin, AlignmentType,
+                Footer, InstrText, InstrPAGE, InstrNUMPAGES, FieldCharType };
+use genpdf::{ Document, elements, fonts, style, Element, SimplePageDecorator };
+use genpdf::Alignment;
+
+use crate::{ Choices, QBank, Questions, check_path };
+use crate::{ Students, Student };
+use crate::{ ShuffledQSet, ShuffledQSets };
 
 
 pub struct Generator
@@ -26,7 +30,7 @@ pub struct Generator
 
 impl Generator
 {
-    // pub fn new_one_set(qbank: &QBank, start: u16, end: u16) -> Option<Self>
+    // pub fn new_one_set(qbank: &QBank, start: u16, end: u16, selected: usize) -> Option<Self>
     /// Creates a new `Generator` instance for a single shuffled set.
     ///
     /// This function generates a single shuffled question set based on the provided
@@ -36,6 +40,7 @@ impl Generator
     /// * `qbank` - A reference to the `QBank` containing the original questions.
     /// * `start` - The starting number of the questions to include (inclusive).
     /// * `end` - The ending number of the questions to include (inclusive).
+    /// * `selected` - The number of questions to be randomly selected.
     ///
     /// # Output
     /// An `Option<Self>` which is `Some(Generator)` if successful, or `None` if
@@ -49,31 +54,32 @@ impl Generator
     /// qbank.add_question("Question 1".to_string(), "Answer 1".to_string());
     /// qbank.add_question("Question 2".to_string(), "Answer 2".to_string());
     ///
-    /// let generator = Generator::new_one_set(&qbank, 1, 2);
+    /// let generator = Generator::new_one_set(&qbank, 1, 2, 2);
     /// assert!(generator.is_some());
     /// ```
-    pub fn new_one_set(qbank: &QBank, start: u16, end: u16) -> Option<Self>
+    pub fn new_one_set(qbank: &QBank, start: u16, end: u16, selected: usize) -> Option<Self>
     {
         let student = Student::new_empty();
         let students = vec![student];
-        Self::new(qbank, start, end, &students)
+        Self::new(qbank, start, end, selected, &students)
     }
 
-    // pub fn new(qbank: &QBank, start: u16, end: u16, students: &Students) -> Option<Self>
+    // pub fn new(qbank: &QBank, start: u16, end: u16, selected: usize, students: &Students) -> Option<Self>
     /// Creates a new `Generator` instance for multiple shuffled sets, one for each student.
     ///
     /// This function generates shuffled question sets for each student based on the
-    /// provided question bank, starting and ending question numbers.
+    /// provided question bank, considering a specified range and number of randomly selected questions.
     ///
     /// # Arguments
     /// * `qbank` - A reference to the `QBank` containing the original questions.
-    /// * `start` - The starting number of the questions to include (inclusive).
-    /// * `end` - The ending number of the questions to include (inclusive).
+    /// * `start` - The 1-based starting index of questions to consider (inclusive).
+    /// * `end` - The 1-based ending index of questions to consider (inclusive).
+    /// * `selected` - The number of questions to be randomly selected for each student.
     /// * `students` - A slice of `Student` instances for whom shuffled sets will be generated.
     ///
     /// # Output
     /// An `Option<Self>` which is `Some(Generator)` if successful, or `None` if
-    /// the generation fails (e.g., invalid question range).
+    /// the generation fails (e.g., invalid question range, insufficient questions, or selected count).
     ///
     /// # Examples
     /// ```
@@ -87,15 +93,16 @@ impl Generator
     /// let student2 = Student::new_from_name("Bob".to_string());
     /// let students = Students::new(vec![student1, student2]);
     ///
-    /// let generator = Generator::new(&qbank, 1, 2, &students);
+    /// // Generate exams with 2 questions selected for each student
+    /// let generator = Generator::new(&qbank, 1, 2, 2, &students);
     /// assert!(generator.is_some());
     /// ```
-    pub fn new(qbank: &QBank, start: u16, end: u16, students: &Students) -> Option<Self>
+    pub fn new(qbank: &QBank, start: u16, end: u16, selected: usize, students: &Students) -> Option<Self>
     {
         let mut shuffled_qsets = ShuffledQSets::new();
         for i in 0..students.len()
         {
-            let mut shuffled_qset = ShuffledQSet::new(qbank, &students[i], start, end)?;
+            let mut shuffled_qset = ShuffledQSet::new(qbank, start, end, selected, &students[i])?;
             shuffled_qset.shuffle();
             shuffled_qsets.push(shuffled_qset);
         }
@@ -103,35 +110,35 @@ impl Generator
     }
 
     // pub(crate) fn get_shuffled_qset(&self, idx: usize) -> Option<ShuffledQSet>
-    /// Retrieves a specific shuffled question set by its index.
-    ///
-    /// This function returns a cloned `ShuffledQSet` for the given index,
-    /// if the index is within the bounds of the generated shuffled sets.
-    ///
-    /// # Arguments
-    /// * `idx` - The zero-based index of the shuffled question set to retrieve.
-    ///
-    /// # Output
-    /// An `Option<ShuffledQSet>` which is `Some(ShuffledQSet)` if the index is valid,
-    /// or `None` if the index is out of bounds.
-    ///
-    /// # Examples
-    /// ```
-    /// use qrate::{ QBank, Generator, Student, Students };
-    ///
-    /// let mut qbank = QBank::new_empty();
-    /// qbank.add_question("Question 1".to_string(), "Answer 1".to_string());
-    /// qbank.add_question("Question 2".to_string(), "Answer 2".to_string());
-    ///
-    /// let student1 = Student::new_from_name("Alice".to_string());
-    /// let students = Students::new(vec![student1]);
-    ///
-    /// let generator = Generator::new(&qbank, 1, 2, &students).unwrap();
-    /// let shuffled_qset = generator.get_shuffled_qset(0);
-    /// assert!(shuffled_qset.is_some());
-    /// let no_shuffled_qset = generator.get_shuffled_qset(1);
-    /// assert!(no_shuffled_qset.is_none());
-    /// ```
+    // Retrieves a specific shuffled question set by its index.
+    //
+    // This function returns a cloned `ShuffledQSet` for the given index,
+    // if the index is within the bounds of the generated shuffled sets.
+    //
+    // # Arguments
+    // * `idx` - The zero-based index of the shuffled question set to retrieve.
+    //
+    // # Output
+    // An `Option<ShuffledQSet>` which is `Some(ShuffledQSet)` if the index is valid,
+    // or `None` if the index is out of bounds.
+    //
+    // # Examples
+    // ```
+    // use qrate::{ QBank, Generator, Student, Students };
+    //
+    // let mut qbank = QBank::new_empty();
+    // qbank.add_question("Question 1".to_string(), "Answer 1".to_string());
+    // qbank.add_question("Question 2".to_string(), "Answer 2".to_string());
+    //
+    // let student1 = Student::new_from_name("Alice".to_string());
+    // let students = Students::new(vec![student1]);
+    //
+    // let generator = Generator::new(&qbank, 1, 2, 1, &students).unwrap();
+    // let shuffled_qset = generator.get_shuffled_qset(0);
+    // assert!(shuffled_qset.is_some());
+    // let no_shuffled_qset = generator.get_shuffled_qset(1);
+    // assert!(no_shuffled_qset.is_none());
+    // ```
     #[inline]
     pub(crate) fn get_shuffled_qset(&self, idx: usize) -> Option<ShuffledQSet>
     {
@@ -270,7 +277,7 @@ impl Generator
     /// next question, including the category, the question text, and the choices
     /// in their shuffled order.
     ///
-    /// It is primarily used for self-testing scenarios, such as in the `exam()`
+    /// It is primarily used for self-testing scenarios, suchs as in the `exam()`
     /// function found in `src/examples/prep.rs`.
     ///
     /// # Output
@@ -314,7 +321,7 @@ impl Generator
         let shuffled_indices = shuffled_question.get_choices();
 
         let origin_question = self.origin.get_question(real_question_number as usize)?;
-        let category = self.origin.get_header().get_category(real_question_number as usize)?.clone();
+        let category = self.origin.get_header().get_category(origin_question.get_category())?.clone();
         let question_text = origin_question.get_question().clone();
         let origin_choices = origin_question.get_choices();
 
@@ -330,93 +337,511 @@ impl Generator
         Some((self.current_question_number, category, question_text, choices))
     }
 
-    // pub fn save_shuffled_exams(&self, path: String) -> Result<(), String>
+    // pub fn save_shuffled_exams(&self, path: String, extention: &str) -> Result<(), String>
     /// Saves the shuffled exam sets for all students to a single file.
     ///
     /// The output format is determined by the file extension of the provided path.
-    /// Supported formats are: .txt, .rtf, .docx, and .pdf.
+    /// Supported formats are: .txt, .docx, and .pdf.
     /// This function delegates the actual saving process to format-specific private functions.
     ///
     /// # Arguments
     /// * `path` - The file path where the exams will be saved.
+    /// * `extention` - The desired file extension (e.g., "txt", "docx", "pdf").
     ///
     /// # Output
     /// `Result<(), String>` - Returns `Ok(())` on success, or an `Err` with a
     ///                        `String` describing the error on failure.
-    pub fn save_shuffled_exams(&self, path: String) -> Result<(), String>
+    ///
+    /// # Examples
+    /// ```no_run
+    /// use qrate::{ QBank, Generator, Student, Students, Question };
+    /// use std::fs; // For std::fs::remove_file
+    /// use std::path::Path;
+    ///
+    /// let mut qbank = QBank::new_empty();
+    /// qbank.add_question(Question::new(1, 1, 1, "Question 1".to_string(), vec![]));
+    /// qbank.add_question(Question::new(2, 2, 1, "Question 2".to_string(), vec![]));
+    ///
+    /// let student1 = Student::new_from_name("Alice".to_string());
+    /// let students = Students::new(vec![student1]);
+    ///
+    /// // Generate exams with 1 question selected for each student
+    /// let generator = Generator::new(&qbank, 1, 2, 1, &students).unwrap();
+    ///
+    /// let result = generator.save_shuffled_exams("exam.txt".to_string(), "txt");
+    /// assert!(result.is_ok());
+    /// std::fs::remove_file("exam.txt").unwrap();
+    /// ```
+    pub fn save_shuffled_exams(&self, path: String, extention: &str) -> Result<(), String>
     {
-        let file_path = Path::new(&path);
+        let checked = check_path(path, extention);
+        let file_path = Path::new(&checked);
         match file_path.extension().and_then(|s| s.to_str())
         {
             Some("txt") => self.save_shuffled_exams_in_txt(file_path),
-            Some("rtf") => self.save_shuffled_exams_in_rtf(file_path),
             Some("docx") => self.save_shuffled_exams_in_docx(file_path),
             Some("pdf") => self.save_shuffled_exams_in_pdf(file_path),
-            _ => Err("Unsupported file format. Please use .txt, .rtf, .docx, or .pdf.".to_string()),
+            _ => Err("Unsupported file format. Please use .txt, .docx, or .pdf.".to_string()),
         }
     }
 
+    // fn format_exam_for_student(&self, student: &Student, qbank: &QBank) -> String
+    /// Formats the exam content for a single student into a human-readable string.
+    ///
+    /// This private helper function generates the textual representation of an exam
+    /// for a given student and their shuffled question bank. It includes the student's
+    /// name, the exam title, and all questions with their shuffled choices.
+    ///
+    /// # Arguments
+    /// * `student` - A reference to the `Student` for whom the exam is being formatted.
+    /// * `qbank` - A reference to the `QBank` containing the shuffled questions for this student.
+    ///
+    /// # Output
+    /// A `String` containing the fully formatted exam content for the student.
+    ///
+    /// # Examples
+    /// ```
+    /// use qrate::{ QBank, Generator, Student, Header };
+    ///
+    /// let mut qbank = QBank::new_empty();
+    /// let mut header = Header::new_empty();
+    /// header.set_title("Test Exam".to_string());
+    /// qbank.set_header(header);
+    /// qbank.add_question_with_choices(
+    ///     "What is 1+1?".to_string(),
+    ///     vec![("1".to_string(), false), ("2".to_string(), true)]
+    /// );
+    ///
+    /// let student = Student::new_from_name("John Doe".to_string());
+    /// let generator = Generator::new_one_set(&qbank, 1, 1).unwrap();
+    ///
+    /// // Since format_exam_for_student is private, we can't directly call it in an example.
+    /// // This example demonstrates how the data would be prepared.
+    /// let (retrieved_student, retrieved_qbank) = generator.get_shuffled_qbank(0).unwrap();
+    /// let formatted_content = format!(
+    ///     "Student: {}\nExam: {}\n\n1. What is 1+1?\n    (A) 1\n    (B) 2\n",
+    ///     retrieved_student.get_name(),
+    ///     retrieved_qbank.get_header().get_title()
+    /// );
+    /// // In a real test, you'd assert against the output of the function,
+    /// // but for a private helper, we rely on its callers to be tested.
+    /// ```
+    fn format_exam_for_student(&self, student: &Student, qbank: &QBank) -> String
+    {
+        let mut content = String::new();
+        let header = qbank.get_header();
+
+        // Exam Title
+        content.push_str(&format!("{}\n", header.get_title()));
+
+        // Student Information
+        content.push_str(&format!("{}: {}        {}: {}\n\n", header.get_name(), student.get_name(), header.get_id(), student.get_id()));
+
+        for (i, question) in qbank.get_questions().iter().enumerate()
+        {
+            let modum = header.get_category(question.get_category()).unwrap();
+            content.push_str(&format!("{}. [{}]   {}\n", i + 1, modum, question.get_question()));
+            for (j, (choice_text, _is_correct)) in question.get_choices().iter().enumerate()
+            {
+                let choice_char = (b'A' + j as u8) as char;
+                content.push_str(&format!("    ({}) {}\n", choice_char, choice_text));
+            }
+            content.push_str("\n"); // Blank line after each question
+        }
+        content
+    }
+
+    // pub fn save_shuffled_exams_in_txt(&self, path: &Path) -> Result<(), String>
     /// Saves the shuffled exam sets to a text file.
-    fn save_shuffled_exams_in_txt(&self, path: &Path) -> Result<(), String>
+    ///
+    /// This function generates a text file containing the shuffled exam sets
+    /// for all students, with each student's exam separated by a clear delimiter.
+    ///
+    /// # Arguments
+    /// * `path` - The file path where the text document will be saved.
+    ///
+    /// # Output
+    /// `Result<(), String>` - Returns `Ok(())` on success, or an `Err` with a
+    ///                        `String` describing the error on failure.
+    ///
+    /// # Examples
+    /// ```no_run
+    /// use qrate::{ QBank, Generator, Student, Students };
+    /// use std::fs;
+    /// use std::path::Path;
+    ///
+    /// let mut qbank = QBank::new_empty();
+    /// qbank.add_question_with_choices(
+    ///     "What is 1+1?".to_string(),
+    ///     vec![("1".to_string(), false), ("2".to_string(), true)]
+    /// );
+    /// qbank.add_question_with_choices(
+    ///     "What is 2+2?".to_string(),
+    ///     vec![("3".to_string(), false), ("4".to_string(), true)]
+    /// );
+    ///
+    /// let student1 = Student::new_from_name("Alice".to_string());
+    /// let students = Students::new(vec![student1]);
+    ///
+    /// let generator = Generator::new(&qbank, 1, 2, 1, &students).unwrap();
+    ///
+    /// let result = generator.save_shuffled_exams_in_txt(Path::new("exam_shuffled.txt"));
+    /// assert!(result.is_ok());
+    /// std::fs::remove_file("exam_shuffled.txt").unwrap();
+    /// ```
+    pub fn save_shuffled_exams_in_txt(&self, path: &Path) -> Result<(), String>
     {
         let mut file = File::create(path).map_err(|e| e.to_string())?;
-        // TODO: Implement the actual logic to write content to the txt file.
-        // For now, it just creates an empty file.
-        writeln!(file, "TODO: Implement TXT saving logic.").map_err(|e| e.to_string())?;
+        let shuffled_qbanks = self.get_shuffled_qbanks();
+
+        for (student, qbank) in &shuffled_qbanks
+        {
+            let content = self.format_exam_for_student(&student, &qbank);
+            writeln!(file, "{}", content).map_err(|e| e.to_string())?;
+            // Add a separator for multiple students, if applicable
+            if self.shuffled_qsets.len() > 1
+                { writeln!(file, "-------------- CUT -------------- 자르기 -------------- резать --------------\n\n").map_err(|e| e.to_string())?; }
+        }
+        // Add a separator for the answer sheet
+        write!(file, "\n\u{000C}\n").map_err(|e| e.to_string())?; // Form feed for page break
+
+        let header = self.origin.get_header(); // Need the original header for titles
+        writeln!(file, "Answer Sheet        정답지        Ответы\n").map_err(|e| e.to_string())?;
+
+        for (student, qbank) in &shuffled_qbanks {
+            // Student Info
+            writeln!(file, "{}: {}        {}: {}",
+                header.get_name(), student.get_name(),
+                header.get_id(), student.get_id()
+            ).map_err(|e| e.to_string())?;
+
+            // Answers
+            let mut answer_line = String::new();
+            for (i, question) in qbank.get_questions().iter().enumerate() {
+                let correct_choices: Vec<String> = question.get_choices()
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, (_, is_correct))| *is_correct)
+                    .map(|(j, _)| ((b'a' + j as u8) as char).to_string())
+                    .collect();
+                let answer_string = correct_choices.join(", ");
+
+                let entry = format!("{}. {}    ", i + 1, answer_string);
+
+                // Simple line wrapping logic
+                if answer_line.len() + entry.len() > 80 && !answer_line.is_empty() {
+                    writeln!(file, "{}", answer_line).map_err(|e| e.to_string())?;
+                    answer_line.clear();
+                }
+                answer_line.push_str(&entry);
+            }
+            if !answer_line.is_empty() {
+                writeln!(file, "{}", answer_line).map_err(|e| e.to_string())?;
+            }
+            writeln!(file, "").map_err(|e| e.to_string())?; // Blank line after each student
+        }
+
         Ok(())
     }
 
-    /// Saves the shuffled exam sets to an RTF file.
-    fn save_shuffled_exams_in_rtf(&self, path: &Path) -> Result<(), String>
-    {
-        let mut file = File::create(path).map_err(|e| e.to_string())?;
-        // TODO: Implement the actual logic to generate and write RTF content.
-        // For now, it just creates an empty file with a placeholder.
-        let mut doc = Doc::new();
-        doc.push_para(Para::new().push_text("TODO: Implement RTF saving logic."));
-        file.write_all(doc.to_bytes().as_slice()).map_err(|e| e.to_string())?;
-        Ok(())
-    }
-
+    // pub fn save_shuffled_exams_in_docx(&self, path: &Path) -> Result<(), String>
     /// Saves the shuffled exam sets to a DOCX file.
-    fn save_shuffled_exams_in_docx(&self, path: &Path) -> Result<(), String>
+    ///
+    /// This function generates a DOCX document containing the shuffled exam sets
+    /// for all students, applying specified page margins and a footer with page numbers.
+    ///
+    /// # Arguments
+    /// * `path` - The file path where the DOCX document will be saved.
+    ///
+    /// # Output
+    /// `Result<(), String>` - Returns `Ok(())` on success, or an `Err` with a
+    ///                        `String` describing the error on failure.
+    ///
+    /// # Examples
+    /// ```no_run
+    /// use qrate::{ QBank, Generator, Student, Students, Question };
+    /// use std::fs;
+    /// use std::path::Path;
+    ///
+    /// let mut qbank = QBank::new_empty();
+    /// qbank.add_question(Question::new(1, 1, 1, "Question 1".to_string(), vec![]));
+    /// qbank.add_question(Question::new(2, 2, 1, "Question 2".to_string(), vec![]));
+    ///
+    /// let student1 = Student::new_from_name("Alice".to_string());
+    /// let students = Students::new(vec![student1]);
+    ///
+    /// let generator = Generator::new(&qbank, 1, 2, 1, &students).unwrap();
+    ///
+    /// let result = generator.save_shuffled_exams_in_docx(Path::new("exam.docx"));
+    /// assert!(result.is_ok());
+    /// std::fs::remove_file("exam.docx").unwrap();
+    /// ```
+    pub fn save_shuffled_exams_in_docx(&self, path: &Path) -> Result<(), String>
     {
+        let footer = Footer::new()
+            .add_paragraph(
+                Paragraph::new()
+                    .add_run(
+                        Run::new()
+                            .add_field_char(FieldCharType::Begin, false)
+                            .add_instr_text(InstrText::PAGE(InstrPAGE::default()))
+                            .add_field_char(FieldCharType::Separate, false)
+                            .add_text("1") // Placeholder text
+                            .add_field_char(FieldCharType::End, false)
+                            .size(20) // 10 pt
+                    )
+                    .add_run(Run::new().add_text(" / ").size(20)) // 10 pt
+                    .add_run(
+                        Run::new()
+                            .add_field_char(FieldCharType::Begin, false)
+                            .add_instr_text(InstrText::NUMPAGES(InstrNUMPAGES::default()))
+                            .add_field_char(FieldCharType::Separate, false)
+                            .add_text("1") // Placeholder text
+                            .add_field_char(FieldCharType::End, false)
+                            .size(20) // 10 pt
+                    )
+                    .align(AlignmentType::Center)
+            );
+        let mut docx = Docx::new()
+            .page_margin(PageMargin::new().top(567).bottom(567).left(567).right(567)) // 1cm top, bottom, left, right
+            .footer(footer);
+        let shuffled_qbanks = self.get_shuffled_qbanks();
+
+        for (idx, (student, qbank)) in shuffled_qbanks.iter().enumerate()
+        {
+            if idx > 0
+                { docx = docx.add_paragraph(Paragraph::new().add_run(Run::new().add_break(BreakType::Page))); } // Page break for subsequent students
+            self.write_exam_content_to_docx(&mut docx, &student, &qbank)?;
+        }
+
+        // Add answer sheet
+        docx = docx.add_paragraph(Paragraph::new().add_run(Run::new().add_break(BreakType::Page)));
+        docx = docx.add_paragraph(Paragraph::new().add_run(Run::new().add_text("Answer Sheet        정답지        Ответы").size(28)).align(AlignmentType::Center)); // 14pt
+        docx = docx.add_paragraph(Paragraph::new()); // Blank line
+
+        let header = self.origin.get_header();
+
+        for (student, qbank) in &shuffled_qbanks {
+            // Student Info
+            let student_info_text = format!("{}: {}        {}: {}",
+                header.get_name(), student.get_name(),
+                header.get_id(), student.get_id()
+            );
+            let student_info_paragraph = Paragraph::new()
+                .add_run(Run::new().add_text(student_info_text).size(24)) // 12pt
+                .line_spacing(docx_rs::LineSpacing::new().line(240));   // Single line spacing
+            docx = docx.add_paragraph(student_info_paragraph);
+
+            // Answers
+            let mut answers_text = String::new();
+            for (i, question) in qbank.get_questions().iter().enumerate() {
+                let correct_choices: Vec<String> = question.get_choices()
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, (_, is_correct))| *is_correct)
+                    .map(|(j, _)| ((b'a' + j as u8) as char).to_string())
+                    .collect();
+                let answer_string = correct_choices.join(", ");
+                answers_text.push_str(&format!("{}. {}    ", i + 1, answer_string));
+            }
+
+            let answers_paragraph = Paragraph::new()
+                .add_run(Run::new().add_text(answers_text).size(24)) // 12pt
+                .line_spacing(docx_rs::LineSpacing::new().line(240));   // Single line spacing
+            docx = docx.add_paragraph(answers_paragraph);
+            docx = docx.add_paragraph(Paragraph::new()); // Blank line
+        }
+
         let file = File::create(path).map_err(|e| e.to_string())?;
-        // TODO: Implement the actual logic to generate and write DOCX content.
-        // For now, it just creates an empty file with a placeholder.
-        let docx = Docx::new().add_paragraph(Paragraph::new().add_run(Run::new().add_text("TODO: Implement DOCX saving logic.")));
         docx.build().pack(file).map_err(|e| e.to_string())?;
         Ok(())
     }
 
-    /// Saves the shuffled exam sets to a PDF file.
-    fn save_shuffled_exams_in_pdf(&self, path: &Path) -> Result<(), String>
+    // fn write_exam_content_to_docx(&self, docx: &mut Docx, student: &Student, qbank: &QBank) -> Result<(), String>
+    /// Writes the formatted exam content for a single student to a DOCX document.
+    ///
+    /// This private helper function takes a mutable DOCX `Docx` object and appends
+    /// the exam content for the given student and their shuffled question bank,
+    /// applying DOCX-specific formatting such as font sizes.
+    ///
+    /// # Arguments
+    /// * `docx` - A mutable reference to the `docx_rs::Docx` object.
+    /// * `student` - A reference to the `Student` for whom the exam content is being written.
+    /// * `qbank` - A reference to the `QBank` containing the shuffled questions for this student.
+    ///
+    /// # Output
+    /// `Result<(), String>` - Returns `Ok(())` on success, or an `Err` with a
+    ///                        `String` describing the error on failure.
+    fn write_exam_content_to_docx(&self, docx: &mut Docx, student: &Student, qbank: &QBank) -> Result<(), String>
     {
-        // TODO: Implement the actual logic to generate and write PDF content.
-        // For now, it just creates an empty file with a placeholder.
-        let font_family = genpdf::fonts::from_files("./fonts", "LiberationSans", None)
-            .map_err(|e| format!("Failed to load font: {}", e))?;
-        let mut doc = genpdf::Document::new(font_family);
-        doc.push(genpdf::elements::Paragraph::new("TODO: Implement PDF saving logic."));
+        let paragraph = |txt, size| -> Paragraph
+        {
+            let elem = Run::new().add_text(txt).size(size << 1);  // `size` pt
+            Paragraph::new().add_run(elem)
+        };
+        let header = qbank.get_header();
+
+        // Exam Title
+        let ex = paragraph(format!("{}", header.get_title()), 14_usize);
+
+        // Student Information
+        let st = paragraph(format!("{}: {}        {}: {}\n\n", header.get_name(), student.get_name(), header.get_id(), student.get_id()), 11_usize);
+
+        // Blank line
+        let blank_line = paragraph(format!(""), 11_usize);
+
+        // Clone to prevent move, then reassign
+        *docx = docx.clone().add_paragraph(ex).add_paragraph(st).add_paragraph(blank_line.clone());
+
+        for (i, question) in qbank.get_questions().iter().enumerate()
+        {
+            let modum = header.get_category(question.get_category()).unwrap();
+            let para = paragraph(format!("{}. [{}]   {}\n", i + 1, modum, question.get_question()), 11_usize);
+            // Clone to prevent move, then reassign
+            *docx = docx.clone().add_paragraph(para);
+            for (j, (choice_text, _is_correct)) in question.get_choices().iter().enumerate()
+            {
+                let choice_char = (b'A' + j as u8) as char;
+                let para = paragraph(format!("    ({}) {}", choice_char, choice_text), 11_usize);
+                // Clone to prevent move, then reassign
+                *docx = docx.clone().add_paragraph(para);
+            }
+            // Blank line after each question
+            *docx = docx.clone().add_paragraph(blank_line.clone());
+        }
+        Ok(())
+    }
+
+    // pub fn save_shuffled_exams_in_pdf(&self, path: &Path) -> Result<(), String>
+    /// Saves the shuffled exam sets to a PDF file.
+    ///
+    /// This function generates a PDF document containing the shuffled exam sets
+    /// for all students, with a footer showing page numbers.
+    ///
+    /// # Arguments
+    /// * `path` - The file path where the PDF document will be saved.
+    ///
+    /// # Output
+    /// `Result<(), String>` - Returns `Ok(())` on success, or an `Err` with a
+    ///                        `String` describing the error on failure.
+    ///
+    /// # Examples
+    /// ```no_run
+    /// use qrate::{ QBank, Generator, Student, Students, Question };
+    /// use std::fs;
+    /// use std::path::Path;
+    ///
+    /// let mut qbank = QBank::new_empty();
+    /// qbank.add_question(Question::new(1, 1, 1, "Question 1".to_string(), vec![]));
+    /// qbank.add_question(Question::new(2, 2, 1, "Question 2".to_string(), vec![]));
+    ///
+    /// let student1 = Student::new_from_name("Alice".to_string());
+    /// let students = Students::new(vec![student1]);
+    ///
+    /// let generator = Generator::new(&qbank, 1, 2, 1, &students).unwrap();
+    ///
+    /// let result = generator.save_shuffled_exams_in_pdf(Path::new("exam.pdf"));
+    /// assert!(result.is_ok());
+    /// std::fs::remove_file("exam.pdf").unwrap();
+    /// ```
+    pub fn save_shuffled_exams_in_pdf(&self, path: &Path) -> Result<(), String>
+    {
+        // let font_style = style::
+        let font_family = fonts::from_files("./fonts", "font", None).map_err(|e| format!("Failed to load font: {}", e))?;
+        let mut doc = Document::new(font_family);
+        // Set 1cm margins (10mm) and page numbers for all sides
+        let mut decorator = SimplePageDecorator::new();
+        decorator.set_margins(10); // 10mm = 1cm
+        doc.set_page_decorator(decorator);
+        let shuffled_qbanks = self.get_shuffled_qbanks();
+
+        for (idx, (student, qbank)) in shuffled_qbanks.iter().enumerate()
+        {
+            if idx > 0
+                { doc.push(elements::PageBreak::new()); } // Page break for subsequent students
+            self.write_exam_content_to_pdf(&mut doc, &student, &qbank)?;
+        }
+
+        // Add answer sheet
+        doc.push(elements::PageBreak::new());
+        let answer_style = style::Style::new().with_font_size(12);
+        let answer_title_style = style::Style::new().with_font_size(14);
+
+        let mut title_paragraph = elements::Paragraph::new("Answer Sheet        정답지        Ответы");
+        title_paragraph.set_alignment(Alignment::Center);
+        doc.push(title_paragraph.styled(answer_title_style));
+        doc.push(elements::Paragraph::new("")); // Blank line
+
+        let header = self.origin.get_header();
+
+        for (student, qbank) in &shuffled_qbanks {
+            // Student Info
+            let student_info_text = format!("{}: {}        {}: {}",
+                header.get_name(), student.get_name(),
+                header.get_id(), student.get_id()
+            );
+            doc.push(elements::Paragraph::new(student_info_text).styled(answer_style));
+
+            // Answers
+            let mut answers_text = String::new();
+            for (i, question) in qbank.get_questions().iter().enumerate() {
+                let correct_choices: Vec<String> = question.get_choices()
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, (_, is_correct))| *is_correct)
+                    .map(|(j, _)| ((b'a' + j as u8) as char).to_string())
+                    .collect();
+                let answer_string = correct_choices.join(", ");
+                answers_text.push_str(&format!("{}. {}    ", i + 1, answer_string));
+            }
+            doc.push(elements::Paragraph::new(answers_text).styled(answer_style));
+            doc.push(elements::Paragraph::new("")); // Blank line
+        }
+
         doc.render_to_file(path).map_err(|e| e.to_string())?;
         Ok(())
     }
+
+    // fn write_exam_content_to_pdf(&self, doc: &mut genpdf::Document, student: &Student, qbank: &QBank) -> Result<(), String>
+    /// Writes the formatted exam content for a single student to a PDF document.
+    ///
+    /// This private helper function takes a mutable PDF `genpdf::Document` object
+    /// and appends the exam content for the given student and their shuffled
+    /// question bank, applying PDF-specific formatting such as font sizes.
+    ///
+    /// # Arguments
+    /// * `doc` - A mutable reference to the `genpdf::Document` object.
+    /// * `student` - A reference to the `Student` for whom the exam content is being written.
+    /// * `qbank` - A reference to the `QBank` containing the shuffled questions for this student.
+    ///
+    /// # Output
+    /// `Result<(), String>` - Returns `Ok(())` on success, or an `Err` with a
+    ///                        `String` describing the error on failure.
+    fn write_exam_content_to_pdf(&self, doc: &mut genpdf::Document, student: &Student, qbank: &QBank) -> Result<(), String>
+    {
+        // Define font sizes
+        let title_font_size = 14;
+        let normal_font_size = 11;
+        let header = qbank.get_header();
+
+        // Exam Title
+        doc.push(elements::Paragraph::new(format!("{}", header.get_title())).styled(style::Style::new().with_font_size(title_font_size)));
+
+        // Student Information
+        doc.push(elements::Paragraph::new(format!("{}: {}        {}: {}", header.get_name(), student.get_name(), header.get_id(), student.get_id())).styled(style::Style::new().with_font_size(normal_font_size)));
+        doc.push(elements::Paragraph::new("")); // Blank line
+
+        for (i, question) in qbank.get_questions().iter().enumerate()
+        {
+            let modum = header.get_category(question.get_category()).unwrap();
+            doc.push(elements::Paragraph::new(format!("{}. [{}]   {}", i + 1, modum, question.get_question())).styled(style::Style::new().with_font_size(normal_font_size)));
+            for (j, (choice_text, _is_correct)) in question.get_choices().iter().enumerate()
+            {
+                let choice_char = (b'A' + j as u8) as char;
+                doc.push(elements::Paragraph::new(format!("    ({}) {}", choice_char, choice_text)).styled(style::Style::new().with_font_size(normal_font_size)));
+            }
+            doc.push(elements::Paragraph::new("")); // Blank line after each question
+        }
+        Ok(())
+    }
 }
-
-// * 기능
-// ** 각각의 학생들의 시험 세트를 path 파일 이름의 확장자에 따라 다른 문서 포맷으로 path 파일 이름의 하나의 파일에 한꺼번에 저장한다.
-// * 저장하려는 파일 포맷에 대한 지시 사항
-// ** 페이지를 나눌 수 있는 포맷이라면, 다음 학생의 시험 세트를 쓸 때에는 다음 페이지에서 시작한다.
-// ** 글꼴의 크기를 정할 수 있는 포맷에 대한 지시 시항
-// *** 시험의 타이틀 즉, Header::title의 내용은 14 포인트로 한다.
-// *** 시험의 주의사항 즉, Header::notice의 내용은 11 포인트로 한다.
-// *** 그 외의 것들은 모두 11 포인트로 한다.
-// ** 줄간격은 한 줄 간격으로 한다.
-// ** 문제와 문제 사이에는 기본적으로 하나의 빈 줄들을 삽입한다.
-// ** 하나의 문제가 두 페이지로 나뉘지 않도록 필요한 경우, 문제와 문제 사이에 복수의 빈 줄들을 삽입한다.
-
-// * 함수를 만듦에 있어서의 지시사항
-// ** save_shuffled_exams_in_txt(), save_shuffled_exams_in_rtf(),
-// save_shuffled_exams_in_docx(), save_shuffled_exams_in_pdf() 함수들도
-// 너무 길게 만들지 말고 기능 별로 쪼개서 private 함수들을 만들고, 이를 호출한다.
-// ** 공통되는 기능은 하나의 함수를 만들어 여러 함수들에서 이를 호출한다.

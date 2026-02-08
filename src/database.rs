@@ -8,8 +8,10 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 
-use std::path::Path;
 use rusqlite::{ Connection, Error };
+
+use crate::check_path;
+
 
 /// Represents an SQLite database connection.
 ///
@@ -47,11 +49,7 @@ impl SQLiteDB
     /// ```
     pub fn open_with_ext(path: String, extention: &str) -> Option<Self>
     {
-        let obj = Path::new(&path);
-        let extended_path = if obj.extension().and_then(|s| s.to_str()) == Some(extention)
-            { path }
-        else
-            { format!("{}.{}", path, extention) };
+        let extended_path = check_path(path, extention);
         if let Ok(con) = Connection::open(&extended_path)
             { Some(Self { path: extended_path, conn: con }) }
         else

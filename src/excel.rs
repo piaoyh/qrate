@@ -9,11 +9,9 @@
 
 
 
-use std::path::Path;
 use calamine::DataType;
 
-use crate::Question;
-use crate::Choices;
+use crate::{ Question, Choices, check_path };
 
 
 /// Represents an Excel file for question bank operations.
@@ -49,14 +47,10 @@ impl Excel
     /// assert!(excel_handler.is_some());
     /// assert_eq!(excel_handler.unwrap().get_path(), "my_quiz.qb.xlsx");
     /// ```
+    #[inline]
     pub fn open_with_ext(path: String, extention: &str) -> Option<Self>
     {
-        let obj = Path::new(&path);
-        let extended_path = if obj.extension().and_then(|s| s.to_str()) == Some(extention)
-            { path }
-        else
-            { format!("{}.{}", path, extention) };
-        Some(Self { path: extended_path })
+        Some(Self { path: check_path(path, extention) })
     }
 
     // pub fn get_path(&self) -> &String

@@ -241,10 +241,9 @@ impl SBDB for SQLiteDB
     /// `Result<(), String>` - `Ok(())` on success, or an error message string on failure.
     fn write_sbank(&mut self, sbank: &SBank) -> Result<(), String>
     {
+        let _ = self.make_table();
         if sbank.is_empty()
-        {
-            return Ok(()); // Nothing to write, which is a success.
-        }
+            { return Ok(()); }  // Nothing to write, which is a success.
 
         let tx = self.conn.transaction().map_err(|e| e.to_string())?;
         {

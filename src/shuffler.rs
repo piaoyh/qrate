@@ -2,6 +2,7 @@
 // use std::fs::File;
 // use std::io::Write;
 use cryptocol::random::Slapdash as PRNG;
+use std::collections::HashMap;
 
 use crate::{ QBank, Student };
 
@@ -236,53 +237,97 @@ pub struct ShuffledQSet
 
 impl ShuffledQSet
 {
-    // pub fn new(qbank: &QBank, student: &Student, start: u16, end: u16) -> Option<Self>
-    /// Creates a new set of shuffled questions for a student from a range of questions in a `QBank`.
-    /// The choices for each question are shuffled upon creation.
-    /// 
+    // pub fn new(qbank: &QBank, start: u16, end: u16, selected: usize, student: &Student) -> Option<Self>
+    /// Creates a new set of shuffled questions for a student by randomly selecting a specified number of questions from a `QBank` within a given range.
+    /// Each selected question will belong to a unique group. The choices for each question are shuffled upon creation.
+    ///
     /// # Arguments
     /// * `qbank` - A reference to the `QBank` to draw questions from.
+    /// * `start` - The 1-based starting index of questions to consider from the `QBank`.
+    /// * `end` - The 1-based ending index of questions to consider from the `QBank`.
+    /// * `selected` - The number of questions to randomly select. Each selected question will have a unique group ID.
     /// * `student` - The `Student` for whom this question set is.
-    /// * `start` - The 1-based starting index of questions to include from the `QBank`.
-    /// * `end` - The 1-based ending index of questions to include from the `QBank`.
-    /// 
+    ///
     /// # Output
-    /// `Option<Self>` - A new `ShuffledQSet` instance, or `None` if the range is invalid.
-    /// 
+    /// `Option<Self>` - A new `ShuffledQSet` instance, or `None` if:
+    ///                  - The question range is invalid (start > end, start > last, end > last, or selected is 0).
+    ///                  - The number of available unique question groups is less than `selected`.
+    ///
     /// # Examples
     /// ```
-    /// use qrate::{QBank, Student, shuffler::ShuffledQSet};
-    /// use qrate::Question;
+    /// use qrate::{QBank, Student, Question, shuffler::ShuffledQSet};
     /// let mut qbank = QBank::new_with_default();
-    /// qbank.push_question(Question::new(1, 1, 1, "Q1".to_string(), vec![])); // Add a question
-    /// qbank.push_question(Question::new(2, 1, 1, "Q2".to_string(), vec![]));
-    /// qbank.push_question(Question::new(3, 1, 1, "Q3".to_string(), vec![]));
-    /// qbank.push_question(Question::new(4, 1, 1, "Q4".to_string(), vec![]));
-    /// qbank.push_question(Question::new(5, 1, 1, "Q5".to_string(), vec![]));
+    /// qbank.push_question(Question::new(1, 1, 1, "Q1".to_string(), vec![])); // id 1, group 1
+    /// qbank.push_question(Question::new(2, 1, 1, "Q2".to_string(), vec![])); // id 2, group 1
+    /// qbank.push_question(Question::new(3, 2, 1, "Q3".to_string(), vec![])); // id 3, group 2
+    /// qbank.push_question(Question::new(4, 3, 1, "Q4".to_string(), vec![])); // id 4, group 3
+    /// qbank.push_question(Question::new(5, 4, 1, "Q5".to_string(), vec![])); // id 5, group 4
+    ///
     /// let student = Student::new("Test".to_string(), "123".to_string());
-    /// let qset = ShuffledQSet::new(&qbank, &student, 1, 5).unwrap();
+    /// // Select 3 questions from unique groups between ID 1 and 5
+    /// let qset = ShuffledQSet::new(&qbank, 1, 5, 3, &student).unwrap();
     /// assert_eq!(qset.get_student().get_name(), "Test");
-    /// assert_eq!(qset.get_shuffled_questions().len(), 5);
+    /// assert_eq!(qset.get_shuffled_questions().len(), 3);
+    ///
+    /// // Try to select more questions than available unique groups (4 unique groups total)
+    /// let qset_none = ShuffledQSet::new(&qbank, 1, 5, 5, &student);
+    /// assert!(qset_none.is_none());
+    ///
+    /// // Invalid range
+    /// let qset_invalid_range = ShuffledQSet::new(&qbank, 5, 1, 1, &student);
+    /// assert!(qset_invalid_range.is_none());
+    ///
+    /// // Selected count is 0
+    /// let qset_zero_selected = ShuffledQSet::new(&qbank, 1, 5, 0, &student);
+    /// assert!(qset_zero_selected.is_none());
     /// ```
-    pub fn new(qbank: &QBank, student: &Student, start: u16, end: u16) -> Option<Self>
+    pub fn new(qbank: &QBank, start: u16, end: u16, selected: usize, student: &Student) -> Option<Self>
     {
         let last = qbank.get_questions().len() as u16;
-        if (start > end) || (start > last) || (end > last)
+        if (start == 0) || (start > end) || (start > last) || (end > last) || (selected == 0)
             { return None }
 
-        let mut questions = ShuffledQuestions::new();
-        for q_number in start..=end
+        // Filter questions by range
+        let questions_in_range: Vec<crate::Question> = qbank.get_questions()
+            .iter()
+            .filter(|q| q.get_id() >= start && q.get_id() <= end)
+            .cloned() // Clone to get owned Question objects
+            .collect();
+
+        // Group questions by group id
+        let mut grouped_questions: HashMap<u16, Vec<crate::Question>> = HashMap::new(); // Change Vec<&crate::Question> to Vec<crate::Question>
+        for question in questions_in_range // question is now crate::Question
+            { grouped_questions.entry(question.get_group()).or_default().push(question); }
+
+        let mut available_groups_keys: Vec<u16> = grouped_questions.keys().cloned().collect();
+        if available_groups_keys.len() < selected
+            { return None; }
+
+        let mut prng = PRNG::new(); // Slapdash::new() returns a Random_Generic object
+        let mut selected_shuffled_questions = ShuffledQuestions::new();
+
+        for _ in 0..selected
         {
-            if let Some(question) = qbank.get_question(q_number as usize)
+            // Randomly select a group key
+            let group_key_index = prng.random_under_uint_(available_groups_keys.len());
+            let selected_group_key = available_groups_keys.remove(group_key_index as usize);
+
+            // From the selected group, pick one question randomly
+            if let Some(questions_in_group) = grouped_questions.get(&selected_group_key)
             {
-                let number_of_choices = question.get_choices().len() as u8;
-                let mut shuffled_question = ShuffledQuestion::new(q_number, number_of_choices);
-                shuffled_question.shuffle();
-                questions.push(shuffled_question);
+                if !questions_in_group.is_empty()
+                {
+                    let question_index = prng.random_under_uint_(questions_in_group.len());
+                    let original_question = &questions_in_group[question_index as usize]; // original_question is now &crate::Question
+                    let number_of_choices = original_question.get_choices().len() as u8;
+                    let mut shuffled_question = ShuffledQuestion::new(original_question.get_id(), number_of_choices);
+                    shuffled_question.shuffle();
+                    selected_shuffled_questions.push(shuffled_question);
+                }
             }
         }
-
-        Some(Self{ student: student.clone(), questions })
+        
+        Some(Self{ student: student.clone(), questions: selected_shuffled_questions })
     }
 
     // pub fn shuffle(&mut self)
@@ -437,7 +482,7 @@ impl ShuffledQSet
     #[inline]
     pub fn get_shuffled_question(&self, question_number: u16) -> Option<&ShuffledQuestion>
     {
-        if question_number == 0 { None } else { Some(self.questions[question_number - 1]) }
+        if question_number == 0 { None } else { Some(&self.questions[(question_number - 1) as usize]) }
     }
 }
 

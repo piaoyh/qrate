@@ -241,26 +241,26 @@ impl Header
         &self.categories
     }
 
-    // pub fn get_category(&self, idx: usize) -> Option<&String>
-    /// Gets a specific category by its index.
+    // pub fn get_category(&self, cat: u8) -> Option<&String>
+    /// Gets a specific category by its ID.
     ///
     /// # Arguments
-    /// * `idx` - The zero-based index of the category to retrieve.
+    /// * `cat` - The 1-based ID of the category to retrieve.
     ///
     /// # Output
-    /// `Option<&String>` - An optional reference to the category string at the specified index.
+    /// `Option<&String>` - An optional reference to the category string at the specified ID.
     ///
     /// # Examples
     /// ```
     /// use qrate::Header;
     /// let header = Header::new_with_default();
-    /// assert_eq!(header.get_category(0), Some(&"Type A".to_string()));
-    /// assert_eq!(header.get_category(99), None);
+    /// assert_eq!(header.get_category(1), Some(&"Type A".to_string()));
+    /// assert_eq!(header.get_category(100), None);
     /// ```
-    pub fn get_category(&self, idx: usize) -> Option<&String>
+    pub fn get_category(&self, cat: u8) -> Option<&String>
     {
-        if idx < self.categories.len()
-            { Some(&self.categories[idx]) }
+        if cat > 0 && cat <= self.categories.len() as u8
+            { Some(&self.categories[cat as usize - 1]) }
         else
             { None }
     }
