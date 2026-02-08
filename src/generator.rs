@@ -26,6 +26,16 @@ pub struct Generator
     origin: QBank,
     shuffled_qsets: ShuffledQSets,
     current_question_number: u16,
+    title_font_size: f32,
+    default_font_size: f32,
+    footer_font_size: f32,
+    answer_sheet_font_size: f32,
+    margin_left_in_mm: f32,
+    margin_right_in_mm: f32,
+    margin_top_in_mm: f32,
+    margin_buttom_in_mm: f32,
+    font_for_pdf: String,
+    answer_sheet_title: String,
 }
 
 impl Generator
@@ -106,44 +116,61 @@ impl Generator
             shuffled_qset.shuffle();
             shuffled_qsets.push(shuffled_qset);
         }
-        Some(Self { origin: qbank.clone(), shuffled_qsets, current_question_number: 0 })
+        Some(
+            Self
+            {
+                origin: qbank.clone(),
+                shuffled_qsets,
+                current_question_number: 0,
+                title_font_size: 14.0,
+                default_font_size: 11.0,
+                footer_font_size: 9.0,
+                answer_sheet_font_size: 12.0,
+                margin_left_in_mm: 10.0,
+                margin_right_in_mm: 10.0,
+                margin_top_in_mm: 10.0,
+                margin_buttom_in_mm: 10.0,
+                font_for_pdf: "./fonts/font".to_string(),
+                answer_sheet_title: "Answer Sheet        정답지        Ответы".to_string()
+             }
+        )
     }
 
+    // // pub(crate) fn get_shuffled_qset(&self, idx: usize) -> Option<ShuffledQSet>
+    // // Retrieves a specific shuffled question set by its index.
+    // //
+    // // This function returns a cloned `ShuffledQSet` for the given index,
+    // // if the index is within the bounds of the generated shuffled sets.
+    // //
+    // // # Arguments
+    // // * `idx` - The zero-based index of the shuffled question set to retrieve.
+    // //
+    // // # Output
+    // // An `Option<ShuffledQSet>` which is `Some(ShuffledQSet)` if the index is valid,
+    // // or `None` if the index is out of bounds.
+    // //
+    // // # Examples
+    // // ```
+    // // use qrate::{ QBank, Generator, Student, Students };
+    // //
+    // // let mut qbank = QBank::new_empty();
+    // // qbank.add_question("Question 1".to_string(), "Answer 1".to_string());
+    // // qbank.add_question("Question 2".to_string(), "Answer 2".to_string());
+    // //
+    // // let student1 = Student::new_from_name("Alice".to_string());
+    // // let students = Students::new(vec![student1]);
+    // //
+    // // let generator = Generator::new(&qbank, 1, 2, 1, &students).unwrap();
+    // // let shuffled_qset = generator.get_shuffled_qset(0);
+    // // assert!(shuffled_qset.is_some());
+    // // let no_shuffled_qset = generator.get_shuffled_qset(1);
+    // // assert!(no_shuffled_qset.is_none());
+    // // ```
+    // #[inline]
     // pub(crate) fn get_shuffled_qset(&self, idx: usize) -> Option<ShuffledQSet>
-    // Retrieves a specific shuffled question set by its index.
-    //
-    // This function returns a cloned `ShuffledQSet` for the given index,
-    // if the index is within the bounds of the generated shuffled sets.
-    //
-    // # Arguments
-    // * `idx` - The zero-based index of the shuffled question set to retrieve.
-    //
-    // # Output
-    // An `Option<ShuffledQSet>` which is `Some(ShuffledQSet)` if the index is valid,
-    // or `None` if the index is out of bounds.
-    //
-    // # Examples
-    // ```
-    // use qrate::{ QBank, Generator, Student, Students };
-    //
-    // let mut qbank = QBank::new_empty();
-    // qbank.add_question("Question 1".to_string(), "Answer 1".to_string());
-    // qbank.add_question("Question 2".to_string(), "Answer 2".to_string());
-    //
-    // let student1 = Student::new_from_name("Alice".to_string());
-    // let students = Students::new(vec![student1]);
-    //
-    // let generator = Generator::new(&qbank, 1, 2, 1, &students).unwrap();
-    // let shuffled_qset = generator.get_shuffled_qset(0);
-    // assert!(shuffled_qset.is_some());
-    // let no_shuffled_qset = generator.get_shuffled_qset(1);
-    // assert!(no_shuffled_qset.is_none());
-    // ```
-    #[inline]
-    pub(crate) fn get_shuffled_qset(&self, idx: usize) -> Option<ShuffledQSet>
-    {
-        if idx < self.shuffled_qsets.len() { Some(self.shuffled_qsets[idx].clone()) } else { None }
-    }
+    // {
+    //     if idx < self.shuffled_qsets.len() { Some(self.shuffled_qsets[idx].clone()) } else { None }
+    // }
 
     // pub fn get_shuffled_qbank(&self, idx: usize) -> Option<(Student, QBank)>
     /// Retrieves a specific shuffled `QBank` and its associated `Student` by index.
@@ -500,19 +527,17 @@ impl Generator
             writeln!(file, "{}", content).map_err(|e| e.to_string())?;
             // Add a separator for multiple students, if applicable
             if self.shuffled_qsets.len() > 1
-                { writeln!(file, "-------------- CUT -------------- 자르기 -------------- резать --------------\n\n").map_err(|e| e.to_string())?; }
+                { writeln!(file, "-------X------- CUT -------X------- 자르기 -------X------- резать -------X-------\n\n").map_err(|e| e.to_string())?; }
         }
         // Add a separator for the answer sheet
         write!(file, "\n\u{000C}\n").map_err(|e| e.to_string())?; // Form feed for page break
 
         let header = self.origin.get_header(); // Need the original header for titles
-        writeln!(file, "Answer Sheet        정답지        Ответы\n").map_err(|e| e.to_string())?;
-
+        writeln!(file, "{}{}", self.answer_sheet_title, "\n").map_err(|e| e.to_string())?;
         for (student, qbank) in &shuffled_qbanks {
             // Student Info
             writeln!(file, "{}: {}        {}: {}",
-                header.get_name(), student.get_name(),
-                header.get_id(), student.get_id()
+                header.get_name(), student.get_name(), header.get_id(), student.get_id()
             ).map_err(|e| e.to_string())?;
 
             // Answers
@@ -578,6 +603,8 @@ impl Generator
     /// ```
     pub fn save_shuffled_exams_in_docx(&self, path: &Path) -> Result<(), String>
     {
+        let pt_to_usize = |pt: f32| -> usize { (pt as usize) << 1 };
+        let footer_font_size = pt_to_usize(self.footer_font_size);
         let footer = Footer::new()
             .add_paragraph(
                 Paragraph::new()
@@ -588,9 +615,13 @@ impl Generator
                             .add_field_char(FieldCharType::Separate, false)
                             .add_text("1") // Placeholder text
                             .add_field_char(FieldCharType::End, false)
-                            .size(20) // 10 pt
+                            .size(footer_font_size)   // 9 pt for default
                     )
-                    .add_run(Run::new().add_text(" / ").size(20)) // 10 pt
+                    .add_run(
+                        Run::new()
+                            .add_text(" / ")
+                            .size(footer_font_size)   // 9 pt for default
+                    )
                     .add_run(
                         Run::new()
                             .add_field_char(FieldCharType::Begin, false)
@@ -598,12 +629,23 @@ impl Generator
                             .add_field_char(FieldCharType::Separate, false)
                             .add_text("1") // Placeholder text
                             .add_field_char(FieldCharType::End, false)
-                            .size(20) // 10 pt
+                            .size(footer_font_size)   // 9 pt for default
                     )
                     .align(AlignmentType::Center)
             );
+        let mm_to_twips = |mm: f32| -> i32  { (mm * 56.6929).round() as i32 };
+        let left = mm_to_twips(self.margin_left_in_mm);
+        let right = mm_to_twips(self.margin_right_in_mm);
+        let top = mm_to_twips(self.margin_top_in_mm);
+        let buttom = mm_to_twips(self.margin_buttom_in_mm);
         let mut docx = Docx::new()
-            .page_margin(PageMargin::new().top(567).bottom(567).left(567).right(567)) // 1cm top, bottom, left, right
+                        .page_margin(
+                            PageMargin::new()
+                                .left(left)
+                                .right(right)
+                                .top(top)
+                                .bottom(buttom)
+            ) // 1 cm for default left, right, top, bottom
             .footer(footer);
         let shuffled_qbanks = self.get_shuffled_qbanks();
 
@@ -615,20 +657,30 @@ impl Generator
         }
 
         // Add answer sheet
+        let title_font_size = pt_to_usize(self.title_font_size);
         docx = docx.add_paragraph(Paragraph::new().add_run(Run::new().add_break(BreakType::Page)));
-        docx = docx.add_paragraph(Paragraph::new().add_run(Run::new().add_text("Answer Sheet        정답지        Ответы").size(28)).align(AlignmentType::Center)); // 14pt
+        docx = docx.add_paragraph(Paragraph::new()
+                                    .add_run(
+                                        Run::new()
+                                            .add_text(self.answer_sheet_title.as_str())
+                                            .size(title_font_size)
+                                        )
+                                        .align(AlignmentType::Center)); // 14 pt for default font size
         docx = docx.add_paragraph(Paragraph::new()); // Blank line
 
         let header = self.origin.get_header();
 
-        for (student, qbank) in &shuffled_qbanks {
+        for (student, qbank) in &shuffled_qbanks
+        {
             // Student Info
             let student_info_text = format!("{}: {}        {}: {}",
-                header.get_name(), student.get_name(),
-                header.get_id(), student.get_id()
+                header.get_name(), student.get_name(), header.get_id(), student.get_id()
             );
             let student_info_paragraph = Paragraph::new()
-                .add_run(Run::new().add_text(student_info_text).size(24)) // 12pt
+                .add_run(
+                    Run::new()
+                        .add_text(student_info_text)
+                        .size(footer_font_size)) // 9 pt for default
                 .line_spacing(docx_rs::LineSpacing::new().line(240));   // Single line spacing
             docx = docx.add_paragraph(student_info_paragraph);
 
@@ -645,9 +697,13 @@ impl Generator
                 answers_text.push_str(&format!("{}. {}    ", i + 1, answer_string));
             }
 
+            let answer_sheet_font_size = pt_to_usize(self.answer_sheet_font_size);
             let answers_paragraph = Paragraph::new()
-                .add_run(Run::new().add_text(answers_text).size(24)) // 12pt
-                .line_spacing(docx_rs::LineSpacing::new().line(240));   // Single line spacing
+                                        .add_run(Run::new()
+                                                    .add_text(answers_text)
+                                                    .size(answer_sheet_font_size)
+                                                ) // 12 pt for default answer sheet font size
+                                        .line_spacing(docx_rs::LineSpacing::new().line(240));   // Single line spacing
             docx = docx.add_paragraph(answers_paragraph);
             docx = docx.add_paragraph(Paragraph::new()); // Blank line
         }
@@ -674,21 +730,24 @@ impl Generator
     ///                        `String` describing the error on failure.
     fn write_exam_content_to_docx(&self, docx: &mut Docx, student: &Student, qbank: &QBank) -> Result<(), String>
     {
+        let pt_to_usize = |pt: f32| -> usize { (pt as usize) << 1 };
+        let default_font_size = pt_to_usize(self.default_font_size);
+        let title_font_size = pt_to_usize(self.title_font_size);
         let paragraph = |txt, size| -> Paragraph
         {
-            let elem = Run::new().add_text(txt).size(size << 1);  // `size` pt
+            let elem = Run::new().add_text(txt).size(size);  // `size` pt
             Paragraph::new().add_run(elem)
         };
         let header = qbank.get_header();
 
         // Exam Title
-        let ex = paragraph(format!("{}", header.get_title()), 14_usize);
+        let ex = paragraph(format!("{}", header.get_title()), title_font_size);
 
         // Student Information
-        let st = paragraph(format!("{}: {}        {}: {}\n\n", header.get_name(), student.get_name(), header.get_id(), student.get_id()), 11_usize);
+        let st = paragraph(format!("{}: {}        {}: {}\n\n", header.get_name(), student.get_name(), header.get_id(), student.get_id()), default_font_size);
 
         // Blank line
-        let blank_line = paragraph(format!(""), 11_usize);
+        let blank_line = paragraph(format!(""), default_font_size);
 
         // Clone to prevent move, then reassign
         *docx = docx.clone().add_paragraph(ex).add_paragraph(st).add_paragraph(blank_line.clone());
@@ -696,13 +755,13 @@ impl Generator
         for (i, question) in qbank.get_questions().iter().enumerate()
         {
             let modum = header.get_category(question.get_category()).unwrap();
-            let para = paragraph(format!("{}. [{}]   {}\n", i + 1, modum, question.get_question()), 11_usize);
+            let para = paragraph(format!("{}. [{}]   {}\n", i + 1, modum, question.get_question()), default_font_size);
             // Clone to prevent move, then reassign
             *docx = docx.clone().add_paragraph(para);
             for (j, (choice_text, _is_correct)) in question.get_choices().iter().enumerate()
             {
                 let choice_char = (b'A' + j as u8) as char;
-                let para = paragraph(format!("    ({}) {}", choice_char, choice_text), 11_usize);
+                let para = paragraph(format!("    ({}) {}", choice_char, choice_text), default_font_size);
                 // Clone to prevent move, then reassign
                 *docx = docx.clone().add_paragraph(para);
             }
@@ -725,6 +784,13 @@ impl Generator
     /// `Result<(), String>` - Returns `Ok(())` on success, or an `Err` with a
     ///                        `String` describing the error on failure.
     ///
+    /// # Caution
+    /// This method will look for four specific fonts in the subdirectory
+    /// `fonts` that is located in the current working directory. The fonts that
+    /// should be in the folder `./fonts` should have the names:
+    /// font-Regular.ttf, font-Italic.ttf, font-Bold.ttf, and
+    /// font-BoldItalic.ttf. If there is no such a folder or there is not any
+    /// 
     /// # Examples
     /// ```no_run
     /// use qrate::{ QBank, Generator, Student, Students, Question };
