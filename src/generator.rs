@@ -25,10 +25,11 @@ pub struct Generator
     origin: QBank,
     shuffled_qsets: ShuffledQSets,
     current_question_number: u16,
+    body_font_size: f32,
     title_font_size: f32,
-    default_font_size: f32,
-    footer_font_size: f32,
     answer_sheet_font_size: f32,
+    footer_font_size: f32,
+    attributes: u16,
     margin_left_in_mm: f32,
     margin_right_in_mm: f32,
     margin_top_in_mm: f32,
@@ -39,6 +40,26 @@ pub struct Generator
 
 impl Generator
 {
+    const BODY_BOLD: u16 = 0b_1;
+    const BODY_ITALIC: u16 = 0b_10;
+    const BODY_UNDERLINE: u16 = 0b_100;
+    const BODY_STRIKE: u16 = 0b_1000;
+
+    const TITLE_BOLD: u16 = 0b_1_0000;
+    const TITLE_ITALIC: u16 = 0b_10_0000;
+    const TITLE_UNDERLINE: u16 = 0b_100_0000;
+    const TITLE_STRIKE: u16 = 0b_1000_0000;
+
+    const ANSWER_SHEET_BOLD: u16 = 0b_1_0000_0000;
+    const ANSWER_SHEET_ITALIC: u16 = 0b_10_0000_0000;
+    const ANSWER_SHEET_UNDERLINE: u16 = 0b_100_0000_0000;
+    const ANSWER_SHEET_STRIKE: u16 = 0b_1000_0000_0000;
+
+    const FOOTER_BOLD: u16 = 0b_1_0000_0000_0000;
+    const FOOTER_ITALIC: u16 = 0b_10_0000_0000_0000;
+    const FOOTER_UNDERLINE: u16 = 0b_100_0000_0000_0000;
+    const FOOTER_STRIKE: u16 = 0b_1000_0000_0000_0000;
+
     // pub fn new_one_set(qbank: &QBank, start: u16, end: u16, selected: usize) -> Option<Self>
     /// Creates a new `Generator` instance for a single shuffled set.
     ///
@@ -122,9 +143,10 @@ impl Generator
                 shuffled_qsets,
                 current_question_number: 0,
                 title_font_size: 14.0,
-                default_font_size: 11.0,
-                footer_font_size: 9.0,
+                body_font_size: 11.0,
                 answer_sheet_font_size: 12.0,
+                footer_font_size: 9.0,
+                attributes: Self::TITLE_BOLD,
                 margin_left_in_mm: 10.0,
                 margin_right_in_mm: 10.0,
                 margin_top_in_mm: 10.0,
@@ -177,7 +199,7 @@ impl Generator
         self.title_font_size = title_font_size;
     }
     
-    // pub fn get_default_font_size(&self) -> f32
+    // pub fn get_body_font_size(&self) -> f32
     /// Retrieves the current default font size in points.
     ///
     /// # Output
@@ -189,20 +211,20 @@ impl Generator
     ///
     /// let qbank = QBank::new_empty();
     /// let generator = Generator::new_one_set(&qbank, 1, 1, 1).unwrap();
-    /// let font_size = generator.get_default_font_size();
+    /// let font_size = generator.get_body_font_size();
     /// assert_eq!(font_size, 11.0);
     /// ```
     #[inline]
-    pub fn get_default_font_size(&self) -> f32
+    pub fn get_body_font_size(&self) -> f32
     {
-        self.default_font_size
+        self.body_font_size
     }
     
-    // pub fn set_default_font_size(&mut self, default_font_size: f32)
+    // pub fn set_body_font_size(&mut self, body_font_size: f32)
     /// Sets the default font size in points.
     ///
     /// # Arguments
-    /// * `default_font_size` - The new default font size.
+    /// * `body_font_size` - The new default font size.
     ///
     /// # Examples
     /// ```
@@ -210,13 +232,13 @@ impl Generator
     ///
     /// let qbank = QBank::new_empty();
     /// let mut generator = Generator::new_one_set(&qbank, 1, 1, 1).unwrap();
-    /// generator.set_default_font_size(12.0);
-    /// assert_eq!(generator.get_default_font_size(), 12.0);
+    /// generator.set_body_font_size(12.0);
+    /// assert_eq!(generator.get_body_font_size(), 12.0);
     /// ```
     #[inline]
-    pub fn set_default_font_size(&mut self, default_font_size: f32)
+    pub fn set_body_font_size(&mut self, body_font_size: f32)
     {
-        self.default_font_size = default_font_size
+        self.body_font_size = body_font_size
     }
     
     // pub fn get_footer_font_size(&self) -> f32
@@ -301,6 +323,854 @@ impl Generator
     pub fn set_answer_sheet_font_size(&mut self, answer_sheet_font_size: f32)
     {
         self.answer_sheet_font_size = answer_sheet_font_size;
+    }
+
+    // pub fn is_body_bold(&self) -> bool
+    /// Checks if the body text is set to bold.
+    ///
+    /// # Output
+    /// `bool` - `true` if the body text is bold, `false` otherwise.
+    ///
+    /// # Examples
+    /// ```
+    /// use qrate::{ QBank, Generator };
+    ///
+    /// let qbank = QBank::new_empty();
+    /// let mut generator = Generator::new_one_set(&qbank, 1, 1, 1).unwrap();
+    /// assert!(!generator.is_body_bold());
+    /// generator.set_body_bold(true);
+    /// assert!(generator.is_body_bold());
+    /// ```
+    #[inline]
+    pub fn is_body_bold(&self) -> bool
+    {
+        (self.attributes & Self::BODY_BOLD) == Self::BODY_BOLD
+    }
+
+    // pub fn set_body_bold(&mut self, on: bool)
+    /// Sets or unsets the bold attribute for the body text.
+    ///
+    /// # Arguments
+    /// * `on` - `true` to set the body text to bold, `false` to unset it.
+    ///
+    /// # Examples
+    /// ```
+    /// use qrate::{ QBank, Generator };
+    ///
+    /// let qbank = QBank::new_empty();
+    /// let mut generator = Generator::new_one_set(&qbank, 1, 1, 1).unwrap();
+    /// generator.set_body_bold(true);
+    /// assert!(generator.is_body_bold());
+    /// generator.set_body_bold(false);
+    /// assert!(!generator.is_body_bold());
+    /// ```
+    #[inline]
+    pub fn set_body_bold(&mut self, on: bool)
+    {
+        if on
+            { self.attributes |= Self::BODY_BOLD; }
+        else
+            { self.attributes &= !Self::BODY_BOLD; }
+    }
+
+    // pub fn is_body_italic(&self) -> bool
+    /// Checks if the body text is set to italic.
+    ///
+    /// # Output
+    /// `bool` - `true` if the body text is italic, `false` otherwise.
+    ///
+    /// # Examples
+    /// ```
+    /// use qrate::{ QBank, Generator };
+    ///
+    /// let qbank = QBank::new_empty();
+    /// let mut generator = Generator::new_one_set(&qbank, 1, 1, 1).unwrap();
+    /// assert!(!generator.is_body_italic());
+    /// generator.set_body_italic(true);
+    /// assert!(generator.is_body_italic());
+    /// ```
+    #[inline]
+    pub fn is_body_italic(&self) -> bool
+    {
+        (self.attributes & Self::BODY_ITALIC) == Self::BODY_ITALIC
+    }
+
+    // pub fn set_body_italic(&mut self, on: bool)
+    /// Sets or unsets the italic attribute for the body text.
+    ///
+    /// # Arguments
+    /// * `on` - `true` to set the body text to italic, `false` to unset it.
+    ///
+    /// # Examples
+    /// ```
+    /// use qrate::{ QBank, Generator };
+    ///
+    /// let qbank = QBank::new_empty();
+    /// let mut generator = Generator::new_one_set(&qbank, 1, 1, 1).unwrap();
+    /// generator.set_body_italic(true);
+    /// assert!(generator.is_body_italic());
+    /// generator.set_body_italic(false);
+    /// assert!(!generator.is_body_italic());
+    /// ```
+    #[inline]
+    pub fn set_body_italic(&mut self, on: bool)
+    {
+        if on
+            { self.attributes |= Self::BODY_ITALIC; }
+        else
+            { self.attributes &= !Self::BODY_ITALIC; }
+    }
+
+    // pub fn is_body_underline(&self) -> bool
+    /// Checks if the body text is set to underline.
+    ///
+    /// # Output
+    /// `bool` - `true` if the body text is underlined, `false` otherwise.
+    ///
+    /// # Examples
+    /// ```
+    /// use qrate::{ QBank, Generator };
+    ///
+    /// let qbank = QBank::new_empty();
+    /// let mut generator = Generator::new_one_set(&qbank, 1, 1, 1).unwrap();
+    /// assert!(!generator.is_body_underline());
+    /// generator.set_body_underline(true);
+    /// assert!(generator.is_body_underline());
+    /// ```
+    #[inline]
+    pub fn is_body_underline(&self) -> bool
+    {
+        (self.attributes & Self::BODY_UNDERLINE) == Self::BODY_UNDERLINE
+    }
+
+    // pub fn set_body_underline(&mut self, on: bool)
+    /// Sets or unsets the underline attribute for the body text.
+    ///
+    /// # Arguments
+    /// * `on` - `true` to set the body text to underline, `false` to unset it.
+    ///
+    /// # Examples
+    /// ```
+    /// use qrate::{ QBank, Generator };
+    ///
+    /// let qbank = QBank::new_empty();
+    /// let mut generator = Generator::new_one_set(&qbank, 1, 1, 1).unwrap();
+    /// generator.set_body_underline(true);
+    /// assert!(generator.is_body_underline());
+    /// generator.set_body_underline(false);
+    /// assert!(!generator.is_body_underline());
+    /// ```
+    #[inline]
+    pub fn set_body_underline(&mut self, on: bool)
+    {
+        if on
+            { self.attributes |= Self::BODY_UNDERLINE; }
+        else
+            { self.attributes &= !Self::BODY_UNDERLINE; }
+    }
+
+    // pub fn is_body_strike(&self) -> bool
+    /// Checks if the body text is set to strikethrough.
+    ///
+    /// # Output
+    /// `bool` - `true` if the body text is strikethrough, `false` otherwise.
+    ///
+    /// # Examples
+    /// ```
+    /// use qrate::{ QBank, Generator };
+    ///
+    /// let qbank = QBank::new_empty();
+    /// let mut generator = Generator::new_one_set(&qbank, 1, 1, 1).unwrap();
+    /// assert!(!generator.is_body_strike());
+    /// generator.set_body_strike(true);
+    /// assert!(generator.is_body_strike());
+    /// ```
+    #[inline]
+    pub fn is_body_strike(&self) -> bool
+    {
+        (self.attributes & Self::BODY_STRIKE) == Self::BODY_STRIKE
+    }
+
+    // pub fn set_body_strike(&mut self, on: bool)
+    /// Sets or unsets the strikethrough attribute for the body text.
+    ///
+    /// # Arguments
+    /// * `on` - `true` to set the body text to strikethrough, `false` to unset it.
+    ///
+    /// # Examples
+    /// ```
+    /// use qrate::{ QBank, Generator };
+    ///
+    /// let qbank = QBank::new_empty();
+    /// let mut generator = Generator::new_one_set(&qbank, 1, 1, 1).unwrap();
+    /// generator.set_body_strike(true);
+    /// assert!(generator.is_body_strike());
+    /// generator.set_body_strike(false);
+    /// assert!(!generator.is_body_strike());
+    /// ```
+    #[inline]
+    pub fn set_body_strike(&mut self, on: bool)
+    {
+        if on
+            { self.attributes |= Self::BODY_STRIKE; }
+        else
+            { self.attributes &= !Self::BODY_STRIKE; }
+    }
+
+
+    // pub fn is_title_bold(&self) -> bool
+    /// Checks if the title text is set to bold.
+    ///
+    /// # Output
+    /// `bool` - `true` if the title text is bold, `false` otherwise.
+    ///
+    /// # Examples
+    /// ```
+    /// use qrate::{ QBank, Generator };
+    ///
+    /// let qbank = QBank::new_empty();
+    /// let mut generator = Generator::new_one_set(&qbank, 1, 1, 1).unwrap();
+    /// assert!(generator.is_title_bold()); // Default is true
+    /// generator.set_title_bold(false);
+    /// assert!(!generator.is_title_bold());
+    /// ```
+    #[inline]
+    pub fn is_title_bold(&self) -> bool
+    {
+        (self.attributes & Self::TITLE_BOLD) == Self::TITLE_BOLD
+    }
+
+    // pub fn set_title_bold(&mut self, on: bool)
+    /// Sets or unsets the bold attribute for the title text.
+    ///
+    /// # Arguments
+    /// * `on` - `true` to set the title text to bold, `false` to unset it.
+    ///
+    /// # Examples
+    /// ```
+    /// use qrate::{ QBank, Generator };
+    ///
+    /// let qbank = QBank::new_empty();
+    /// let mut generator = Generator::new_one_set(&qbank, 1, 1, 1).unwrap();
+    /// generator.set_title_bold(false); // Default is true, so unset it
+    /// assert!(!generator.is_title_bold());
+    /// generator.set_title_bold(true);
+    /// assert!(generator.is_title_bold());
+    /// ```
+    #[inline]
+    pub fn set_title_bold(&mut self, on: bool)
+    {
+        if on
+            { self.attributes |= Self::TITLE_BOLD; }
+        else
+            { self.attributes &= !Self::TITLE_BOLD; }
+    }
+
+    // pub fn is_title_italic(&self) -> bool
+    /// Checks if the title text is set to italic.
+    ///
+    /// # Output
+    /// `bool` - `true` if the title text is italic, `false` otherwise.
+    ///
+    /// # Examples
+    /// ```
+    /// use qrate::{ QBank, Generator };
+    ///
+    /// let qbank = QBank::new_empty();
+    /// let mut generator = Generator::new_one_set(&qbank, 1, 1, 1).unwrap();
+    /// assert!(!generator.is_title_italic());
+    /// generator.set_title_italic(true);
+    /// assert!(generator.is_title_italic());
+    /// ```
+    #[inline]
+    pub fn is_title_italic(&self) -> bool
+    {
+        (self.attributes & Self::TITLE_ITALIC) == Self::TITLE_ITALIC
+    }
+
+    // pub fn set_title_italic(&mut self, on: bool)
+    /// Sets or unsets the italic attribute for the title text.
+    ///
+    /// # Arguments
+    /// * `on` - `true` to set the title text to italic, `false` to unset it.
+    ///
+    /// # Examples
+    /// ```
+    /// use qrate::{ QBank, Generator };
+    ///
+    /// let qbank = QBank::new_empty();
+    /// let mut generator = Generator::new_one_set(&qbank, 1, 1, 1).unwrap();
+    /// generator.set_title_italic(true);
+    /// assert!(generator.is_title_italic());
+    /// generator.set_title_italic(false);
+    /// assert!(!generator.is_title_italic());
+    /// ```
+    #[inline]
+    pub fn set_title_italic(&mut self, on: bool)
+    {
+        if on
+            { self.attributes |= Self::TITLE_ITALIC; }
+        else
+            { self.attributes &= !Self::TITLE_ITALIC; }
+    }
+
+    // pub fn is_title_underline(&self) -> bool
+    /// Checks if the title text is set to underline.
+    ///
+    /// # Output
+    /// `bool` - `true` if the title text is underlined, `false` otherwise.
+    ///
+    /// # Examples
+    /// ```
+    /// use qrate::{ QBank, Generator };
+    ///
+    /// let qbank = QBank::new_empty();
+    /// let mut generator = Generator::new_one_set(&qbank, 1, 1, 1).unwrap();
+    /// assert!(!generator.is_title_underline());
+    /// generator.set_title_underline(true);
+    /// assert!(generator.is_title_underline());
+    /// ```
+    #[inline]
+    pub fn is_title_underline(&self) -> bool
+    {
+        (self.attributes & Self::TITLE_UNDERLINE) == Self::TITLE_UNDERLINE
+    }
+
+    // pub fn set_title_underline(&mut self, on: bool)
+    /// Sets or unsets the underline attribute for the title text.
+    ///
+    /// # Arguments
+    /// * `on` - `true` to set the title text to underline, `false` to unset it.
+    ///
+    /// # Examples
+    /// ```
+    /// use qrate::{ QBank, Generator };
+    ///
+    /// let qbank = QBank::new_empty();
+    /// let mut generator = Generator::new_one_set(&qbank, 1, 1, 1).unwrap();
+    /// generator.set_title_underline(true);
+    /// assert!(generator.is_title_underline());
+    /// generator.set_title_underline(false);
+    /// assert!(!generator.is_title_underline());
+    /// ```
+    #[inline]
+    pub fn set_title_underline(&mut self, on: bool)
+    {
+        if on
+            { self.attributes |= Self::TITLE_UNDERLINE; }
+        else
+            { self.attributes &= !Self::TITLE_UNDERLINE; }
+    }
+
+    // pub fn is_title_strike(&self) -> bool
+    /// Checks if the title text is set to strikethrough.
+    ///
+    /// # Output
+    /// `bool` - `true` if the title text is strikethrough, `false` otherwise.
+    ///
+    /// # Examples
+    /// ```
+    /// use qrate::{ QBank, Generator };
+    ///
+    /// let qbank = QBank::new_empty();
+    /// let mut generator = Generator::new_one_set(&qbank, 1, 1, 1).unwrap();
+    /// assert!(!generator.is_title_strike());
+    /// generator.set_title_strike(true);
+    /// assert!(generator.is_title_strike());
+    /// ```
+    #[inline]
+    pub fn is_title_strike(&self) -> bool
+    {
+        (self.attributes & Self::TITLE_STRIKE) == Self::TITLE_STRIKE
+    }
+
+    // pub fn set_title_strike(&mut self, on: bool)
+    /// Sets or unsets the strikethrough attribute for the title text.
+    ///
+    /// # Arguments
+    /// * `on` - `true` to set the title text to strikethrough, `false` to unset it.
+    ///
+    /// # Examples
+    /// ```
+    /// use qrate::{ QBank, Generator };
+    ///
+    /// let qbank = QBank::new_empty();
+    /// let mut generator = Generator::new_one_set(&qbank, 1, 1, 1).unwrap();
+    /// generator.set_title_strike(true);
+    /// assert!(generator.is_title_strike());
+    /// generator.set_title_strike(false);
+    /// assert!(!generator.is_title_strike());
+    /// ```
+    #[inline]
+    pub fn set_title_strike(&mut self, on: bool)
+    {
+        if on
+            { self.attributes |= Self::TITLE_STRIKE; }
+        else
+            { self.attributes &= !Self::TITLE_STRIKE; }
+    }
+
+    // pub fn is_footer_bold(&self) -> bool
+    /// Checks if the footer text is set to bold.
+    ///
+    /// # Output
+    /// `bool` - `true` if the footer text is bold, `false` otherwise.
+    ///
+    /// # Examples
+    /// ```
+    /// use qrate::{ QBank, Generator };
+    ///
+    /// let qbank = QBank::new_empty();
+    /// let mut generator = Generator::new_one_set(&qbank, 1, 1, 1).unwrap();
+    /// assert!(!generator.is_footer_bold());
+    /// generator.set_footer_bold(true);
+    /// assert!(generator.is_footer_bold());
+    /// ```
+    #[inline]
+    pub fn is_footer_bold(&self) -> bool
+    {
+        (self.attributes & Self::FOOTER_BOLD) == Self::FOOTER_BOLD
+    }
+
+    // pub fn set_footer_bold(&mut self, on: bool)
+    /// Sets or unsets the bold attribute for the footer text.
+    ///
+    /// # Arguments
+    /// * `on` - `true` to set the footer text to bold, `false` to unset it.
+    ///
+    /// # Examples
+    /// ```
+    /// use qrate::{ QBank, Generator };
+    ///
+    /// let qbank = QBank::new_empty();
+    /// let mut generator = Generator::new_one_set(&qbank, 1, 1, 1).unwrap();
+    /// generator.set_footer_bold(true);
+    /// assert!(generator.is_footer_bold());
+    /// generator.set_footer_bold(false);
+    /// assert!(!generator.is_footer_bold());
+    /// ```
+    #[inline]
+    pub fn set_footer_bold(&mut self, on: bool)
+    {
+        if on
+            { self.attributes |= Self::FOOTER_BOLD; }
+        else
+            { self.attributes &= !Self::FOOTER_BOLD; }
+    }
+
+    // pub fn is_footer_italic(&self) -> bool
+    /// Checks if the footer text is set to italic.
+    ///
+    /// # Output
+    /// `bool` - `true` if the footer text is italic, `false` otherwise.
+    ///
+    /// # Examples
+    /// ```
+    /// use qrate::{ QBank, Generator };
+    ///
+    /// let qbank = QBank::new_empty();
+    /// let mut generator = Generator::new_one_set(&qbank, 1, 1, 1).unwrap();
+    /// assert!(!generator.is_footer_italic());
+    /// generator.set_footer_italic(true);
+    /// assert!(generator.is_footer_italic());
+    /// ```
+    #[inline]
+    pub fn is_footer_italic(&self) -> bool
+    {
+        (self.attributes & Self::FOOTER_ITALIC) == Self::FOOTER_ITALIC
+    }
+
+    // pub fn set_footer_italic(&mut self, on: bool)
+    /// Sets or unsets the italic attribute for the footer text.
+    ///
+    /// # Arguments
+    /// * `on` - `true` to set the footer text to italic, `false` to unset it.
+    ///
+    /// # Examples
+    /// ```
+    /// use qrate::{ QBank, Generator };
+    ///
+    /// let qbank = QBank::new_empty();
+    /// let mut generator = Generator::new_one_set(&qbank, 1, 1, 1).unwrap();
+    /// generator.set_footer_italic(true);
+    /// assert!(generator.is_footer_italic());
+    /// generator.set_footer_italic(false);
+    /// assert!(!generator.is_footer_italic());
+    /// ```
+    #[inline]
+    pub fn set_footer_italic(&mut self, on: bool)
+    {
+        if on
+            { self.attributes |= Self::FOOTER_ITALIC; }
+        else
+            { self.attributes &= !Self::FOOTER_ITALIC; }
+    }
+
+    // pub fn is_footer_underline(&self) -> bool
+    /// Checks if the footer text is set to underline.
+    ///
+    /// # Output
+    /// `bool` - `true` if the footer text is underlined, `false` otherwise.
+    ///
+    /// # Examples
+    /// ```
+    /// use qrate::{ QBank, Generator };
+    ///
+    /// let qbank = QBank::new_empty();
+    /// let mut generator = Generator::new_one_set(&qbank, 1, 1, 1).unwrap();
+    /// generator.set_footer_underline(true);
+    /// assert!(generator.is_footer_underline());
+    /// ```
+    #[inline]
+    pub fn is_footer_underline(&self) -> bool
+    {
+        (self.attributes & Self::FOOTER_UNDERLINE) == Self::FOOTER_UNDERLINE
+    }
+
+    // pub fn set_footer_underline(&mut self, on: bool)
+    /// Sets or unsets the underline attribute for the footer text.
+    ///
+    /// # Arguments
+    /// * `on` - `true` to set the footer text to underline, `false` to unset it.
+    ///
+    /// # Examples
+    /// ```
+    /// use qrate::{ QBank, Generator };
+    ///
+    /// let qbank = QBank::new_empty();
+    /// let mut generator = Generator::new_one_set(&qbank, 1, 1, 1).unwrap();
+    /// generator.set_footer_underline(true);
+    /// assert!(generator.is_footer_underline());
+    /// generator.set_footer_underline(false);
+    /// assert!(!generator.is_footer_underline());
+    /// ```
+    #[inline]
+    pub fn set_footer_underline(&mut self, on: bool)
+    {
+        if on
+            { self.attributes |= Self::FOOTER_UNDERLINE; }
+        else
+            { self.attributes &= !Self::FOOTER_UNDERLINE; }
+    }
+
+    // pub fn is_footer_strike(&self) -> bool
+    /// Checks if the footer text is set to strikethrough.
+    ///
+    /// # Output
+    /// `bool` - `true` if the footer text is strikethrough, `false` otherwise.
+    ///
+    /// # Examples
+    /// ```
+    /// use qrate::{ QBank, Generator };
+    ///
+    /// let qbank = QBank::new_empty();
+    /// let mut generator = Generator::new_one_set(&qbank, 1, 1, 1).unwrap();
+    /// assert!(!generator.is_footer_strike());
+    /// generator.set_footer_strike(true);
+    /// assert!(generator.is_footer_strike());
+    /// ```
+    #[inline]
+    pub fn is_footer_strike(&self) -> bool
+    {
+        (self.attributes & Self::FOOTER_STRIKE) == Self::FOOTER_STRIKE
+    }
+
+    // pub fn set_footer_strike(&mut self, on: bool)
+    /// Sets or unsets the strikethrough attribute for the footer text.
+    ///
+    /// # Arguments
+    /// * `on` - `true` to set the footer text to strikethrough, `false` to unset it.
+    ///
+    /// # Examples
+    /// ```
+    /// use qrate::{ QBank, Generator };
+    ///
+    /// let qbank = QBank::new_empty();
+    /// let mut generator = Generator::new_one_set(&qbank, 1, 1, 1).unwrap();
+    /// generator.set_footer_strike(true);
+    /// assert!(generator.is_footer_strike());
+    /// generator.set_footer_strike(false);
+    /// assert!(!generator.is_footer_strike());
+    /// ```
+    #[inline]
+    pub fn set_footer_strike(&mut self, on: bool)
+    {
+        if on
+            { self.attributes |= Self::FOOTER_STRIKE; }
+        else
+            { self.attributes &= !Self::FOOTER_STRIKE; }
+    }
+
+    // pub fn is_answer_sheet_bold(&self) -> bool
+    /// Checks if the answer sheet text is set to bold.
+    ///
+    /// # Output
+    /// `bool` - `true` if the answer sheet text is bold, `false` otherwise.
+    ///
+    /// # Examples
+    /// ```
+    /// use qrate::{ QBank, Generator };
+    ///
+    /// let qbank = QBank::new_empty();
+    /// let mut generator = Generator::new_one_set(&qbank, 1, 1, 1).unwrap();
+    /// assert!(!generator.is_answer_sheet_bold());
+    /// generator.set_answer_sheet_bold(true);
+    /// assert!(generator.is_answer_sheet_bold());
+    /// ```
+    #[inline]
+    pub fn is_answer_sheet_bold(&self) -> bool
+    {
+        (self.attributes & Self::ANSWER_SHEET_BOLD) == Self::ANSWER_SHEET_BOLD
+    }
+
+    // pub fn set_answer_sheet_bold(&mut self, on: bool)
+    /// Sets or unsets the bold attribute for the answer sheet text.
+    ///
+    /// # Arguments
+    /// * `on` - `true` to set the answer sheet text to bold, `false` to unset it.
+    ///
+    /// # Examples
+    /// ```
+    /// use qrate::{ QBank, Generator };
+    ///
+    /// let qbank = QBank::new_empty();
+    /// let mut generator = Generator::new_one_set(&qbank, 1, 1, 1).unwrap();
+    /// generator.set_answer_sheet_bold(true);
+    /// assert!(generator.is_answer_sheet_bold());
+    /// generator.set_answer_sheet_bold(false);
+    /// assert!(!generator.is_answer_sheet_bold());
+    /// ```
+    #[inline]
+    pub fn set_answer_sheet_bold(&mut self, on: bool)
+    {
+        if on
+            { self.attributes |= Self::ANSWER_SHEET_BOLD; }
+        else
+            { self.attributes &= !Self::ANSWER_SHEET_BOLD; }
+    }
+
+    // pub fn is_answer_sheet_italic(&self) -> bool
+    /// Checks if the answer sheet text is set to italic.
+    ///
+    /// # Output
+    /// `bool` - `true` if the answer sheet text is italic, `false` otherwise.
+    ///
+    /// # Examples
+    /// ```
+    /// use qrate::{ QBank, Generator };
+    ///
+    /// let qbank = QBank::new_empty();
+    /// let mut generator = Generator::new_one_set(&qbank, 1, 1, 1).unwrap();
+    /// assert!(!generator.is_answer_sheet_italic());
+    /// generator.set_answer_sheet_italic(true);
+    /// assert!(generator.is_answer_sheet_italic());
+    /// ```
+    #[inline]
+    pub fn is_answer_sheet_italic(&self) -> bool
+    {
+        (self.attributes & Self::ANSWER_SHEET_ITALIC) == Self::ANSWER_SHEET_ITALIC
+    }
+
+    // pub fn set_answer_sheet_italic(&mut self, on: bool)
+    /// Sets or unsets the italic attribute for the answer sheet text.
+    ///
+    /// # Arguments
+    /// * `on` - `true` to set the answer sheet text to italic, `false` to unset it.
+    ///
+    /// # Examples
+    /// ```
+    /// use qrate::{ QBank, Generator };
+    ///
+    /// let qbank = QBank::new_empty();
+    /// let mut generator = Generator::new_one_set(&qbank, 1, 1, 1).unwrap();
+    /// generator.set_answer_sheet_italic(true);
+    /// assert!(generator.is_answer_sheet_italic());
+    /// generator.set_answer_sheet_italic(false);
+    /// assert!(!generator.is_answer_sheet_italic());
+    /// ```
+    #[inline]
+    pub fn set_answer_sheet_italic(&mut self, on: bool)
+    {
+        if on
+            { self.attributes |= Self::ANSWER_SHEET_ITALIC; }
+        else
+            { self.attributes &= !Self::ANSWER_SHEET_ITALIC; }
+    }
+
+    // pub fn is_answer_sheet_underline(&self) -> bool
+    /// Checks if the answer sheet text is set to underline.
+    ///
+    /// # Output
+    /// `bool` - `true` if the answer sheet text is underlined, `false` otherwise.
+    ///
+    /// # Examples
+    /// ```
+    /// use qrate::{ QBank, Generator };
+    ///
+    /// let qbank = QBank::new_empty();
+    /// let mut generator = Generator::new_one_set(&qbank, 1, 1, 1).unwrap();
+    /// assert!(!generator.is_answer_sheet_underline());
+    /// generator.set_answer_sheet_underline(true);
+    /// assert!(generator.is_answer_sheet_underline());
+    /// ```
+    #[inline]
+    pub fn is_answer_sheet_underline(&self) -> bool
+    {
+        (self.attributes & Self::ANSWER_SHEET_UNDERLINE) == Self::ANSWER_SHEET_UNDERLINE
+    }
+
+    // pub fn set_answer_sheet_underline(&mut self, on: bool)
+    /// Sets or unsets the underline attribute for the answer sheet text.
+    ///
+    /// # Arguments
+    /// * `on` - `true` to set the answer sheet text to underline, `false` to unset it.
+    ///
+    /// # Examples
+    /// ```
+    /// use qrate::{ QBank, Generator };
+    ///
+    /// let qbank = QBank::new_empty();
+    /// let mut generator = Generator::new_one_set(&qbank, 1, 1, 1).unwrap();
+    /// generator.set_answer_sheet_underline(true);
+    /// assert!(generator.is_answer_sheet_underline());
+    /// generator.set_answer_sheet_underline(false);
+    /// assert!(!generator.is_answer_sheet_underline());
+    /// ```
+    #[inline]
+    pub fn set_answer_sheet_underline(&mut self, on: bool)
+    {
+        if on
+            { self.attributes |= Self::ANSWER_SHEET_UNDERLINE; }
+        else
+            { self.attributes &= !Self::ANSWER_SHEET_UNDERLINE; }
+    }
+
+    // pub fn is_answer_sheet_strike(&self) -> bool
+    /// Checks if the answer sheet text is set to strikethrough.
+    ///
+    /// # Output
+    /// `bool` - `true` if the answer sheet text is strikethrough, `false` otherwise.
+    ///
+    /// # Examples
+    /// ```
+    /// use qrate::{ QBank, Generator };
+    ///
+    /// let qbank = QBank::new_empty();
+    /// let mut generator = Generator::new_one_set(&qbank, 1, 1, 1).unwrap();
+    /// generator.set_answer_sheet_strike(true);
+    /// assert!(generator.is_answer_sheet_strike());
+    /// ```
+    #[inline]
+    pub fn is_answer_sheet_strike(&self) -> bool
+    {
+        (self.attributes & Self::ANSWER_SHEET_STRIKE) == Self::ANSWER_SHEET_STRIKE
+    }
+
+    // pub fn set_answer_sheet_strike(&mut self, on: bool)
+    /// Sets or unsets the strikethrough attribute for the answer sheet text.
+    ///
+    /// # Arguments
+    /// * `on` - `true` to set the answer sheet text to strikethrough, `false` to unset it.
+    ///
+    /// # Examples
+    /// ```
+    /// use qrate::{ QBank, Generator };
+    ///
+    /// let qbank = QBank::new_empty();
+    /// let mut generator = Generator::new_one_set(&qbank, 1, 1, 1).unwrap();
+    /// generator.set_answer_sheet_strike(true);
+    /// assert!(generator.is_answer_sheet_strike());
+    /// generator.set_answer_sheet_strike(false);
+    /// assert!(!generator.is_answer_sheet_strike());
+    /// ```
+    #[inline]
+    pub fn set_answer_sheet_strike(&mut self, on: bool)
+    {
+        if on
+            { self.attributes |= Self::ANSWER_SHEET_STRIKE; }
+        else
+            { self.attributes &= !Self::ANSWER_SHEET_STRIKE; }
+    }
+
+    // pub fn get_attributes(&self) -> u16
+    /// Retrieves the current attribute bitmask.
+    ///
+    /// # Output
+    /// `u16` - The current attribute bitmask.
+    ///
+    /// # Examples
+    /// ```
+    /// use qrate::{ QBank, Generator };
+    ///
+    /// let qbank = QBank::new_empty();
+    /// let generator = Generator::new_one_set(&qbank, 1, 1, 1).unwrap();
+    /// let attributes = generator.get_attributes();
+    /// // Example: Check if the default title is bold
+    /// // const TITLE_BOLD: u16 = 0b_1_0000;
+    /// // assert_eq!(attributes & TITLE_BOLD, TITLE_BOLD);
+    /// ```
+    #[inline]
+    pub fn get_attributes(&self) -> u16
+    {
+        self.attributes
+    }
+
+    // pub fn set_attributes(&mut self, attr: u16)
+    /// Sets the specified attributes by performing a bitwise OR operation.
+    ///
+    /// This method allows combining multiple attributes (e.g., bold, italic)
+    /// by passing a bitmask.
+    ///
+    /// # Arguments
+    /// * `attr` - A `u16` bitmask representing the attributes to set.
+    ///
+    /// # Examples
+    /// ```
+    /// use qrate::{ QBank, Generator };
+    ///
+    /// let qbank = QBank::new_empty();
+    /// let mut generator = Generator::new_one_set(&qbank, 1, 1, 1).unwrap();
+    /// // For example purposes, let's assume direct access or similar constants
+    /// const BODY_BOLD: u16 = 0b_1;
+    /// const BODY_ITALIC: u16 = 0b_10;
+    /// generator.set_attributes(BODY_BOLD | BODY_ITALIC);
+    /// // assert_eq!(generator.get_attributes() & (BODY_BOLD | BODY_ITALIC), BODY_BOLD | BODY_ITALIC);
+    /// ```
+    #[inline]
+    pub fn set_attributes(&mut self, attr: u16)
+    {
+        self.attributes |= attr;
+    }
+
+    // pub fn reset_attributes(&mut self, attr: u16)
+    /// Resets the specified attributes by performing a bitwise AND NOT operation.
+    ///
+    /// This method allows unsetting multiple attributes (e.g., bold, italic)
+    /// by passing a bitmask.
+    ///
+    /// # Arguments
+    /// * `attr` - A `u16` bitmask representing the attributes to reset.
+    ///
+    /// # Examples
+    /// ```
+    /// use qrate::{ QBank, Generator };
+    ///
+    /// let qbank = QBank::new_empty();
+    /// let mut generator = Generator::new_one_set(&qbank, 1, 1, 1).unwrap();
+    /// // For example purposes, let's assume direct access or similar constants
+    /// const BODY_BOLD: u16 = 0b_1;
+    /// const BODY_ITALIC: u16 = 0b_10;
+    /// generator.set_attributes(BODY_BOLD | BODY_ITALIC);
+    /// // At this point, BODY_BOLD and BODY_ITALIC are set.
+    /// generator.reset_attributes(BODY_ITALIC);
+    /// // Now only BODY_BOLD should be set.
+    /// // assert_eq!(generator.get_attributes() & BODY_BOLD, BODY_BOLD);
+    /// // assert_eq!(generator.get_attributes() & BODY_ITALIC, 0);
+    /// ```
+    #[inline]
+    pub fn reset_attributes(&mut self, attr: u16)
+    {
+        self.attributes &= !attr;
     }
     
     // pub fn get_margin_left_in_mm(&self) -> f32
@@ -949,11 +1819,12 @@ impl Generator
                 { writeln!(file, "-------X------- CUT -------X------- 자르기 -------X------- резать -------X-------\n\n").map_err(|e| e.to_string())?; }
         }
         // Add a separator for the answer sheet
-        write!(file, "\n\u{000C}\n").map_err(|e| e.to_string())?; // Form feed for page break
+        //write!(file, "\n\u{000C}\n").map_err(|e| e.to_string())?; // Form feed for page break
 
         let header = self.origin.get_header(); // Need the original header for titles
         writeln!(file, "{}{}", self.answer_sheet_title, "\n").map_err(|e| e.to_string())?;
-        for (student, qbank) in &shuffled_qbanks {
+        for (student, qbank) in &shuffled_qbanks
+        {
             // Student Info
             writeln!(file, "{}: {}        {}: {}",
                 header.get_name(), student.get_name(), header.get_id(), student.get_id()
@@ -1025,11 +1896,19 @@ impl Generator
         let pt_to_usize = |pt: f32| -> usize { (pt as usize) << 1 };
         let linespacing_to_twips = |linespacing: f32| -> i32 { (linespacing * 240.0) as i32 };
         let footer_font_size = pt_to_usize(self.footer_font_size);
+        let mut footer_run = Run::new();
+        if self.is_footer_bold()
+            { footer_run = footer_run.bold(); }
+        if self.is_footer_italic()
+            { footer_run = footer_run.italic(); }
+        if self.is_footer_underline()
+            { footer_run = footer_run.underline("single"); }
+        if self.is_footer_strike()
+            { footer_run = footer_run.strike(); }
         let footer = Footer::new()
             .add_paragraph(
                 Paragraph::new()
-                    .add_run(
-                        Run::new()
+                    .add_run(footer_run.clone()
                             .add_field_char(FieldCharType::Begin, false)
                             .add_instr_text(InstrText::PAGE(InstrPAGE::default()))
                             .add_field_char(FieldCharType::Separate, false)
@@ -1037,13 +1916,11 @@ impl Generator
                             .add_field_char(FieldCharType::End, false)
                             .size(footer_font_size)   // 9 pt for default
                     )
-                    .add_run(
-                        Run::new()
+                    .add_run(footer_run.clone()
                             .add_text(" / ")
                             .size(footer_font_size)   // 9 pt for default
                     )
-                    .add_run(
-                        Run::new()
+                    .add_run(footer_run
                             .add_field_char(FieldCharType::Begin, false)
                             .add_instr_text(InstrText::NUMPAGES(InstrNUMPAGES::default()))
                             .add_field_char(FieldCharType::Separate, false)
@@ -1078,16 +1955,35 @@ impl Generator
 
         // Add answer sheet
         let title_font_size = pt_to_usize(self.title_font_size);
+        let mut title_run = Run::new();
+        if self.is_title_bold()
+            { title_run = title_run.bold(); }
+        if self.is_title_italic()
+            { title_run = title_run.italic(); }
+        if self.is_title_underline()
+            { title_run = title_run.underline("single"); }
+        if self.is_title_strike()
+            { title_run = title_run.strike(); }
         docx = docx.add_paragraph(Paragraph::new().add_run(Run::new().add_break(BreakType::Page)));
         docx = docx.add_paragraph(Paragraph::new()
-                                    .add_run(
-                                        Run::new()
+                                    .add_run(title_run.clone()
                                             .add_text(self.answer_sheet_title.as_str())
                                             .size(title_font_size)
-                                        )
-                                        .align(AlignmentType::Center)); // 14 pt for default font size
+                                    )
+                                    .align(AlignmentType::Center)); // 14 pt for default font size
         docx = docx.add_paragraph(Paragraph::new()); // Blank line
 
+        let answer_sheet_font_size = pt_to_usize(self.answer_sheet_font_size);
+        let mut answer_sheet_run = Run::new();
+        if self.is_answer_sheet_bold()
+            { answer_sheet_run = answer_sheet_run.bold(); }
+        if self.is_answer_sheet_italic()
+            { answer_sheet_run = answer_sheet_run.italic(); }
+        if self.is_answer_sheet_underline()
+            { answer_sheet_run = answer_sheet_run.underline("single"); }
+        if self.is_answer_sheet_strike()
+            { answer_sheet_run = answer_sheet_run.strike(); }
+        
         let header = self.origin.get_header();
         let line_spacing = linespacing_to_twips(self.line_spacing);
         for (student, qbank) in &shuffled_qbanks
@@ -1098,9 +1994,9 @@ impl Generator
             );
             let student_info_paragraph = Paragraph::new()
                 .add_run(
-                    Run::new()
+                    answer_sheet_run.clone()
                         .add_text(student_info_text)
-                        .size(footer_font_size)) // 9 pt for default
+                        .size(answer_sheet_font_size)) // 12 pt for default
                 .line_spacing(docx_rs::LineSpacing::new().line(line_spacing));   // Single line spacing
             docx = docx.add_paragraph(student_info_paragraph);
 
@@ -1117,9 +2013,8 @@ impl Generator
                 answers_text.push_str(&format!("{}. {}    ", i + 1, answer_string));
             }
 
-            let answer_sheet_font_size = pt_to_usize(self.answer_sheet_font_size);
             let answers_paragraph = Paragraph::new()
-                                        .add_run(Run::new()
+                                        .add_run(answer_sheet_run.clone()
                                                     .add_text(answers_text)
                                                     .size(answer_sheet_font_size)
                                                 ) // 12 pt for default answer sheet font size
@@ -1151,23 +2046,50 @@ impl Generator
     fn write_exam_content_to_docx(&self, docx: &mut Docx, student: &Student, qbank: &QBank) -> Result<(), String>
     {
         let pt_to_usize = |pt: f32| -> usize { (pt as usize) << 1 };
-        let default_font_size = pt_to_usize(self.default_font_size);
+        
+        // Exam Title
         let title_font_size = pt_to_usize(self.title_font_size);
-        let paragraph = |txt, size| -> Paragraph
+        let mut title_run = Run::new();
+        if self.is_title_bold()
+            { title_run = title_run.bold(); }
+        if self.is_title_italic()
+            { title_run = title_run.italic(); }
+        if self.is_title_underline()
+            { title_run = title_run.underline("single"); }
+        if self.is_title_strike()
+            { title_run = title_run.strike(); }
+        
+        let header = qbank.get_header();
+        let ex = Paragraph::new()
+                .add_run(
+                    title_run
+                    .add_text(format!("{}", header.get_title()))
+                    .size(title_font_size)
+                )
+                .align(AlignmentType::Center);
+        
+        let body_font_size = pt_to_usize(self.body_font_size);
+        let mut body_run = Run::new();
+        if self.is_body_bold()
+            { body_run = body_run.bold(); }
+        if self.is_body_italic()
+            { body_run = body_run.italic(); }
+        if self.is_body_underline()
+            { body_run = body_run.underline("single"); }
+        if self.is_body_strike()
+            { body_run = body_run.strike(); }
+        
+        let paragraph = |run: Run, txt, size| -> Paragraph
         {
-            let elem = Run::new().add_text(txt).size(size);  // `size` pt
+            let elem = run.add_text(txt).size(size);  // `size` pt
             Paragraph::new().add_run(elem)
         };
-        let header = qbank.get_header();
-
-        // Exam Title
-        let ex = paragraph(format!("{}", header.get_title()), title_font_size);
 
         // Student Information
-        let st = paragraph(format!("{}: {}        {}: {}\n\n", header.get_name(), student.get_name(), header.get_id(), student.get_id()), default_font_size);
+        let st = paragraph(body_run.clone(), format!("{}: {}        {}: {}\n\n", header.get_name(), student.get_name(), header.get_id(), student.get_id()), body_font_size);
 
         // Blank line
-        let blank_line = paragraph(format!(""), default_font_size);
+        let blank_line = paragraph(body_run.clone(), format!(""), body_font_size);
 
         // Clone to prevent move, then reassign
         *docx = docx.clone().add_paragraph(ex).add_paragraph(st).add_paragraph(blank_line.clone());
@@ -1175,13 +2097,13 @@ impl Generator
         for (i, question) in qbank.get_questions().iter().enumerate()
         {
             let modum = header.get_category(question.get_category()).unwrap();
-            let para = paragraph(format!("{}. [{}]   {}\n", i + 1, modum, question.get_question()), default_font_size);
+            let para = paragraph(body_run.clone(), format!("{}. [{}]   {}\n", i + 1, modum, question.get_question()), body_font_size);
             // Clone to prevent move, then reassign
             *docx = docx.clone().add_paragraph(para);
             for (j, (choice_text, _is_correct)) in question.get_choices().iter().enumerate()
             {
                 let choice_char = (b'A' + j as u8) as char;
-                let para = paragraph(format!("    ({}) {}", choice_char, choice_text), default_font_size);
+                let para = paragraph(body_run.clone(), format!("    ({}) {}", choice_char, choice_text), body_font_size);
                 // Clone to prevent move, then reassign
                 *docx = docx.clone().add_paragraph(para);
             }
@@ -1205,9 +2127,9 @@ impl Generator
     /// `String` describing the error on failure.
     ///
     /// # Caution
-    ///
-    /// This method searches for four specific font files within a `./fonts` 
-    /// subdirectory relative to the current working directory.
+    /// - This method searches for four specific font files within a `./fonts` 
+    ///   subdirectory relative to the current working directory.
+    /// - The attributes of underline and strike are not working.
     ///
     /// The following files must be present for the function to operate correctly:
     /// * `font-Regular.ttf`
@@ -1258,9 +2180,19 @@ impl Generator
 
         // Add answer sheet
         doc.push(elements::PageBreak::new());
-        let answer_style = style::Style::new().with_font_size(self.answer_sheet_font_size as u8);
-        let answer_title_style = style::Style::new().with_font_size(self.title_font_size as u8);
-
+        let mut answer_style = style::Style::new();
+        answer_style.set_font_size(self.answer_sheet_font_size as u8);
+        if self.is_answer_sheet_bold()
+            { answer_style.set_bold(); }
+        if self.is_answer_sheet_italic()
+            { answer_style.set_italic(); }
+        let mut answer_title_style = style::Style::new();
+        answer_title_style.set_font_size(self.title_font_size as u8);
+        if self.is_title_bold()
+            { answer_title_style.set_bold(); }
+        if self.is_title_italic()
+            { answer_title_style.set_italic(); }
+        
         let mut title_paragraph = elements::Paragraph::new(self.answer_sheet_title.clone());
         title_paragraph.set_alignment(Alignment::Center);
         doc.push(title_paragraph.styled(answer_title_style));
@@ -1310,28 +2242,47 @@ impl Generator
     /// # Output
     /// `Result<(), String>` - Returns `Ok(())` on success, or an `Err` with a
     ///                        `String` describing the error on failure.
+    /// 
+    /// # Caution
+    /// - The attributes of underline and strike are not working.
     fn write_exam_content_to_pdf(&self, doc: &mut genpdf::Document, student: &Student, qbank: &QBank) -> Result<(), String>
     {
         // Define font sizes
         let title_font_size = self.title_font_size as u8;       // 14 pt for default
-        let normal_font_size = self.default_font_size as u8;    // 11 pt for default
+        let normal_font_size = self.body_font_size as u8;    // 11 pt for default
         let header = qbank.get_header();
 
-        // Exam Title
-        doc.push(elements::Paragraph::new(format!("{}", header.get_title())).styled(style::Style::new().with_font_size(title_font_size)));
+        let mut title_style = style::Style::new();
+        title_style.set_font_size(title_font_size);
+        if self.is_title_bold()
+            { title_style.set_bold(); }
+        if self.is_title_italic()
+            { title_style.set_italic(); }
 
+        // Exam Title
+        let mut title_paragraph = elements::Paragraph::new(format!("{}", header.get_title()));
+        title_paragraph.set_alignment(Alignment::Center);
+        doc.push(title_paragraph.styled(title_style));
+
+        let mut body_style = style::Style::new();
+        body_style.set_font_size(normal_font_size);
+        if self.is_body_bold()
+            { body_style.set_bold(); }
+        if self.is_body_italic()
+            { body_style.set_italic(); }
+        
         // Student Information
-        doc.push(elements::Paragraph::new(format!("{}: {}        {}: {}", header.get_name(), student.get_name(), header.get_id(), student.get_id())).styled(style::Style::new().with_font_size(normal_font_size)));
+        doc.push(elements::Paragraph::new(format!("{}: {}        {}: {}", header.get_name(), student.get_name(), header.get_id(), student.get_id())).styled(body_style));
         doc.push(elements::Paragraph::new("")); // Blank line
 
         for (i, question) in qbank.get_questions().iter().enumerate()
         {
             let modum = header.get_category(question.get_category()).unwrap();
-            doc.push(elements::Paragraph::new(format!("{}. [{}]   {}", i + 1, modum, question.get_question())).styled(style::Style::new().with_font_size(normal_font_size)));
+            doc.push(elements::Paragraph::new(format!("{}. [{}]   {}", i + 1, modum, question.get_question())).styled(body_style));
             for (j, (choice_text, _is_correct)) in question.get_choices().iter().enumerate()
             {
                 let choice_char = (b'A' + j as u8) as char;
-                doc.push(elements::Paragraph::new(format!("    ({}) {}", choice_char, choice_text)).styled(style::Style::new().with_font_size(normal_font_size)));
+                doc.push(elements::Paragraph::new(format!("    ({}) {}", choice_char, choice_text)).styled(body_style));
             }
             doc.push(elements::Paragraph::new("")); // Blank line after each question
         }
