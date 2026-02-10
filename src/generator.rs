@@ -13,8 +13,7 @@ use std::path::Path;
 
 use docx_rs::{ Docx, Paragraph, Run, BreakType, PageMargin, AlignmentType,
                 Footer, InstrText, InstrPAGE, InstrNUMPAGES, FieldCharType };
-use genpdf::{ Document, elements, fonts, style, Element, SimplePageDecorator };
-use genpdf::Alignment;
+use genpdf::{ Document, elements, fonts, style, Element, SimplePageDecorator, Alignment };
 
 use crate::{ Choices, QBank, Questions, check_path };
 use crate::{ Students, Student };
@@ -34,7 +33,7 @@ pub struct Generator
     margin_right_in_mm: f32,
     margin_top_in_mm: f32,
     margin_buttom_in_mm: f32,
-    font_for_pdf: String,
+    line_spacing: f32,
     answer_sheet_title: String,
 }
 
@@ -130,10 +129,430 @@ impl Generator
                 margin_right_in_mm: 10.0,
                 margin_top_in_mm: 10.0,
                 margin_buttom_in_mm: 10.0,
-                font_for_pdf: "./fonts/font".to_string(),
+                line_spacing: 1.0,
                 answer_sheet_title: "Answer Sheet        정답지        Ответы".to_string()
              }
         )
+    }
+
+    // pub fn get_title_font_size(&self) -> f32
+    /// Retrieves the current title font size in points.
+    ///
+    /// # Output
+    /// `f32` - The current font size used for titles.
+    ///
+    /// # Examples
+    /// ```
+    /// use qrate::{ QBank, Generator };
+    ///
+    /// let qbank = QBank::new_empty();
+    /// let generator = Generator::new_one_set(&qbank, 1, 1, 1).unwrap();
+    /// let font_size = generator.get_title_font_size();
+    /// assert_eq!(font_size, 14.0);
+    /// ```
+    #[inline]
+    pub fn get_title_font_size(&self) -> f32
+    {
+        self.title_font_size
+    }
+    
+    // pub fn set_title_font_size(&mut self, title_font_size: f32)
+    /// Sets the title font siz in points.
+    ///
+    /// # Arguments
+    /// * `title_font_size` - The new font size to be used for titles.
+    ///
+    /// # Examples
+    /// ```
+    /// use qrate::{ QBank, Generator };
+    ///
+    /// let qbank = QBank::new_empty();
+    /// let mut generator = Generator::new_one_set(&qbank, 1, 1, 1).unwrap();
+    /// generator.set_title_font_size(16.0);
+    /// assert_eq!(generator.get_title_font_size(), 16.0);
+    /// ```
+    #[inline]
+    pub fn set_title_font_size(&mut self, title_font_size: f32)
+    {
+        self.title_font_size = title_font_size;
+    }
+    
+    // pub fn get_default_font_size(&self) -> f32
+    /// Retrieves the current default font size in points.
+    ///
+    /// # Output
+    /// `f32` - The current default font size.
+    ///
+    /// # Examples
+    /// ```
+    /// use qrate::{ QBank, Generator };
+    ///
+    /// let qbank = QBank::new_empty();
+    /// let generator = Generator::new_one_set(&qbank, 1, 1, 1).unwrap();
+    /// let font_size = generator.get_default_font_size();
+    /// assert_eq!(font_size, 11.0);
+    /// ```
+    #[inline]
+    pub fn get_default_font_size(&self) -> f32
+    {
+        self.default_font_size
+    }
+    
+    // pub fn set_default_font_size(&mut self, default_font_size: f32)
+    /// Sets the default font size in points.
+    ///
+    /// # Arguments
+    /// * `default_font_size` - The new default font size.
+    ///
+    /// # Examples
+    /// ```
+    /// use qrate::{ QBank, Generator };
+    ///
+    /// let qbank = QBank::new_empty();
+    /// let mut generator = Generator::new_one_set(&qbank, 1, 1, 1).unwrap();
+    /// generator.set_default_font_size(12.0);
+    /// assert_eq!(generator.get_default_font_size(), 12.0);
+    /// ```
+    #[inline]
+    pub fn set_default_font_size(&mut self, default_font_size: f32)
+    {
+        self.default_font_size = default_font_size
+    }
+    
+    // pub fn get_footer_font_size(&self) -> f32
+    /// Retrieves the current footer font size in points.
+    ///
+    /// # Output
+    /// `f32` - The current font size used for footers.
+    ///
+    /// # Examples
+    /// ```
+    /// use qrate::{ QBank, Generator };
+    ///
+    /// let qbank = QBank::new_empty();
+    /// let generator = Generator::new_one_set(&qbank, 1, 1, 1).unwrap();
+    /// let font_size = generator.get_footer_font_size();
+    /// assert_eq!(font_size, 9.0);
+    /// ```
+    #[inline]
+    pub fn get_footer_font_size(&self) -> f32
+    {
+        self.footer_font_size
+    }
+    
+    // pub fn set_footer_font_size(&mut self, footer_font_size: f32)
+    /// Sets the footer font size in points.
+    ///
+    /// # Arguments
+    /// * `footer_font_size` - The new font size to be used for footers.
+    ///
+    /// # Examples
+    /// ```
+    /// use qrate::{ QBank, Generator };
+    ///
+    /// let qbank = QBank::new_empty();
+    /// let mut generator = Generator::new_one_set(&qbank, 1, 1, 1).unwrap();
+    /// generator.set_footer_font_size(10.0);
+    /// assert_eq!(generator.get_footer_font_size(), 10.0);
+    /// ```
+    #[inline]
+    pub fn set_footer_font_size(&mut self, footer_font_size: f32)
+    {
+        self.footer_font_size = footer_font_size
+    }
+    
+    // pub fn get_answer_sheet_font_size(&self) -> f32
+    /// Retrieves the current answer sheet font size in points.
+    ///
+    /// # Output
+    /// `f32` - The current font size used for the answer sheet.
+    ///
+    /// # Examples
+    /// ```
+    /// use qrate::{ QBank, Generator };
+    ///
+    /// let qbank = QBank::new_empty();
+    /// let generator = Generator::new_one_set(&qbank, 1, 1, 1).unwrap();
+    /// let font_size = generator.get_answer_sheet_font_size();
+    /// assert_eq!(font_size, 12.0);
+    /// ```
+    #[inline]
+    pub fn get_answer_sheet_font_size(&self) -> f32
+    {
+        self.answer_sheet_font_size
+    }
+    
+    // pub fn set_answer_sheet_font_size(&mut self, answer_sheet_font_size: f32)
+    /// Sets the answer sheet font size in points.
+    ///
+    /// # Arguments
+    /// * `answer_sheet_font_size` - The new font size to be used for the answer sheet.
+    ///
+    /// # Examples
+    /// ```
+    /// use qrate::{ QBank, Generator };
+    ///
+    /// let qbank = QBank::new_empty();
+    /// let mut generator = Generator::new_one_set(&qbank, 1, 1, 1).unwrap();
+    /// generator.set_answer_sheet_font_size(13.0);
+    /// assert_eq!(generator.get_answer_sheet_font_size(), 13.0);
+    /// ```
+    #[inline]
+    pub fn set_answer_sheet_font_size(&mut self, answer_sheet_font_size: f32)
+    {
+        self.answer_sheet_font_size = answer_sheet_font_size;
+    }
+    
+    // pub fn get_margin_left_in_mm(&self) -> f32
+    /// Retrieves the current left margin in millimeters.
+    ///
+    /// # Output
+    /// `f32` - The current left margin in millimeters.
+    ///
+    /// # Examples
+    /// ```
+    /// use qrate::{ QBank, Generator };
+    ///
+    /// let qbank = QBank::new_empty();
+    /// let generator = Generator::new_one_set(&qbank, 1, 1, 1).unwrap();
+    /// let margin = generator.get_margin_left_in_mm();
+    /// assert_eq!(margin, 10.0);
+    /// ```
+    #[inline]
+    pub fn get_margin_left_in_mm(&self) -> f32
+    {
+        self.margin_left_in_mm
+    }
+    
+    // pub fn set_margin_left_in_mm(&mut self, margin_left_in_mm: f32)
+    /// Sets the left margin in millimeters.
+    ///
+    /// # Arguments
+    /// * `margin_left_in_mm` - The new left margin in millimeters.
+    ///
+    /// # Examples
+    /// ```
+    /// use qrate::{ QBank, Generator };
+    ///
+    /// let qbank = QBank::new_empty();
+    /// let mut generator = Generator::new_one_set(&qbank, 1, 1, 1).unwrap();
+    /// generator.set_margin_left_in_mm(15.0);
+    /// assert_eq!(generator.get_margin_left_in_mm(), 15.0);
+    /// ```
+    #[inline]
+    pub fn set_margin_left_in_mm(&mut self, margin_left_in_mm: f32)
+    {
+        self.margin_left_in_mm = margin_left_in_mm;
+    }
+    
+    // pub fn get_margin_right_in_mm(&self) -> f32
+    /// Retrieves the current right margin in millimeters.
+    ///
+    /// # Output
+    /// `f32` - The current right margin in millimeters.
+    ///
+    /// # Examples
+    /// ```
+    /// use qrate::{ QBank, Generator };
+    ///
+    /// let qbank = QBank::new_empty();
+    /// let generator = Generator::new_one_set(&qbank, 1, 1, 1).unwrap();
+    /// let margin = generator.get_margin_right_in_mm();
+    /// assert_eq!(margin, 10.0);
+    /// ```
+    #[inline]
+    pub fn get_margin_right_in_mm(&self) -> f32
+    {
+        self.margin_right_in_mm
+    }
+    
+    // pub fn set_margin_right_in_mm(&mut self, margin_right_in_mm: f32)
+    /// Sets the right margin in millimeters.
+    ///
+    /// # Arguments
+    /// * `margin_right_in_mm` - The new right margin in millimeters.
+    ///
+    /// # Examples
+    /// ```
+    /// use qrate::{ QBank, Generator };
+    ///
+    /// let qbank = QBank::new_empty();
+    /// let mut generator = Generator::new_one_set(&qbank, 1, 1, 1).unwrap();
+    /// generator.set_margin_right_in_mm(15.0);
+    /// assert_eq!(generator.get_margin_right_in_mm(), 15.0);
+    /// ```
+    #[inline]
+    pub fn set_margin_right_in_mm(&mut self, margin_right_in_mm: f32)
+    {
+        self.margin_right_in_mm = margin_right_in_mm;
+    }
+    
+    // pub fn get_margin_top_in_mm(&self) -> f32
+    /// Retrieves the current top margin in millimeters.
+    ///
+    /// # Output
+    /// `f32` - The current top margin in millimeters.
+    ///
+    /// # Examples
+    /// ```
+    /// use qrate::{ QBank, Generator };
+    ///
+    /// let qbank = QBank::new_empty();
+    /// let generator = Generator::new_one_set(&qbank, 1, 1, 1).unwrap();
+    /// let margin = generator.get_margin_top_in_mm();
+    /// assert_eq!(margin, 10.0);
+    /// ```
+    #[inline]
+    pub fn get_margin_top_in_mm(&self) -> f32
+    {
+        self.margin_top_in_mm
+    }
+    
+    // pub fn set_margin_top_in_mm(&mut self, margin_top_in_mm: f32)
+    /// Sets the top margin in millimeters.
+    ///
+    /// # Arguments
+    /// * `margin_top_in_mm` - The new top margin in millimeters.
+    ///
+    /// # Examples
+    /// ```
+    /// use qrate::{ QBank, Generator };
+    ///
+    /// let qbank = QBank::new_empty();
+    /// let mut generator = Generator::new_one_set(&qbank, 1, 1, 1).unwrap();
+    /// generator.set_margin_top_in_mm(15.0);
+    /// assert_eq!(generator.get_margin_top_in_mm(), 15.0);
+    /// ```
+    #[inline]
+    pub fn set_margin_top_in_mm(&mut self, margin_top_in_mm: f32)
+    {
+        self.margin_top_in_mm = margin_top_in_mm;
+    }
+    
+    // pub fn get_margin_buttom_in_mm(&self) -> f32
+    /// Retrieves the current bottom margin in millimeters.
+    ///
+    /// # Output
+    /// `f32` - The current bottom margin in millimeters.
+    ///
+    /// # Examples
+    /// ```
+    /// use qrate::{ QBank, Generator };
+    ///
+    /// let qbank = QBank::new_empty();
+    /// let generator = Generator::new_one_set(&qbank, 1, 1, 1).unwrap();
+    /// let margin = generator.get_margin_buttom_in_mm();
+    /// assert_eq!(margin, 10.0);
+    /// ```
+    #[inline]
+    pub fn get_margin_buttom_in_mm(&self) -> f32
+    {
+        self.margin_buttom_in_mm
+    }
+    
+    // pub fn set_margin_buttom_in_mm(&mut self, margin_buttom_in_mm: f32)
+    /// Sets the bottom margin in millimeters.
+    ///
+    /// # Arguments
+    /// * `margin_buttom_in_mm` - The new bottom margin in millimeters.
+    ///
+    /// # Examples
+    /// ```
+    /// use qrate::{ QBank, Generator };
+    ///
+    /// let qbank = QBank::new_empty();
+    /// let mut generator = Generator::new_one_set(&qbank, 1, 1, 1).unwrap();
+    /// generator.set_margin_buttom_in_mm(15.0);
+    /// assert_eq!(generator.get_margin_buttom_in_mm(), 15.0);
+    /// ```
+    #[inline]
+    pub fn set_margin_buttom_in_mm(&mut self, margin_buttom_in_mm: f32)
+    {
+        self.margin_buttom_in_mm = margin_buttom_in_mm;
+    }
+    
+    // pub fn get_line_spacing(&self) -> f32
+    /// Retrieves the current line spacing in lines.
+    ///
+    /// # Output
+    /// `f32` - The current line spacing value.
+    ///
+    /// # Examples
+    /// ```
+    /// use qrate::{ QBank, Generator };
+    ///
+    /// let qbank = QBank::new_empty();
+    /// let generator = Generator::new_one_set(&qbank, 1, 1, 1).unwrap();
+    /// let spacing = generator.get_line_spacing();
+    /// assert_eq!(spacing, 1.0);
+    /// ```
+    #[inline]
+    pub fn get_line_spacing(&self) -> f32
+    {
+        self.line_spacing
+    }
+    
+    // pub fn set_line_spacing(&mut self, line_spacing: f32)
+    /// Sets the line spacing in lines.
+    ///
+    /// # Arguments
+    /// * `line_spacing` - The new line spacing value.
+    ///
+    /// # Examples
+    /// ```
+    /// use qrate::{ QBank, Generator };
+    ///
+    /// let qbank = QBank::new_empty();
+    /// let mut generator = Generator::new_one_set(&qbank, 1, 1, 1).unwrap();
+    /// generator.set_line_spacing(1.5);
+    /// assert_eq!(generator.get_line_spacing(), 1.5);
+    /// ```
+    #[inline]
+    pub fn set_line_spacing(&mut self, line_spacing: f32)
+    {
+        self.line_spacing = line_spacing;
+    }
+    
+    // pub fn get_answer_sheet_title(&self) -> String
+    /// Retrieves the current answer sheet title.
+    ///
+    /// # Output
+    /// `String` - The current title for the answer sheet.
+    ///
+    /// # Examples
+    /// ```
+    /// use qrate::{ QBank, Generator };
+    ///
+    /// let qbank = QBank::new_empty();
+    /// let generator = Generator::new_one_set(&qbank, 1, 1, 1).unwrap();
+    /// let title = generator.get_answer_sheet_title();
+    /// assert_eq!(title, "Answer Sheet        정답지        Ответы".to_string());
+    /// ```
+    #[inline]
+    pub fn get_answer_sheet_title(&self) -> String
+    {
+        self.answer_sheet_title.clone()
+    }
+    
+    // pub fn set_answer_sheet_title(&mut self, answer_sheet_title: String)
+    /// Sets the answer sheet title.
+    ///
+    /// # Arguments
+    /// * `answer_sheet_title` - The new title for the answer sheet.
+    ///
+    /// # Examples
+    /// ```
+    /// use qrate::{ QBank, Generator };
+    ///
+    /// let qbank = QBank::new_empty();
+    /// let mut generator = Generator::new_one_set(&qbank, 1, 1, 1).unwrap();
+    /// generator.set_answer_sheet_title("New Answer Sheet Title".to_string());
+    /// assert_eq!(generator.get_answer_sheet_title(), "New Answer Sheet Title".to_string());
+    /// ```
+    #[inline]
+    pub fn set_answer_sheet_title(&mut self, answer_sheet_title: String)
+    {
+        self.answer_sheet_title = answer_sheet_title;
     }
 
     // // pub(crate) fn get_shuffled_qset(&self, idx: usize) -> Option<ShuffledQSet>
@@ -604,6 +1023,7 @@ impl Generator
     pub fn save_shuffled_exams_in_docx(&self, path: &Path) -> Result<(), String>
     {
         let pt_to_usize = |pt: f32| -> usize { (pt as usize) << 1 };
+        let linespacing_to_twips = |linespacing: f32| -> i32 { (linespacing * 240.0) as i32 };
         let footer_font_size = pt_to_usize(self.footer_font_size);
         let footer = Footer::new()
             .add_paragraph(
@@ -669,7 +1089,7 @@ impl Generator
         docx = docx.add_paragraph(Paragraph::new()); // Blank line
 
         let header = self.origin.get_header();
-
+        let line_spacing = linespacing_to_twips(self.line_spacing);
         for (student, qbank) in &shuffled_qbanks
         {
             // Student Info
@@ -681,7 +1101,7 @@ impl Generator
                     Run::new()
                         .add_text(student_info_text)
                         .size(footer_font_size)) // 9 pt for default
-                .line_spacing(docx_rs::LineSpacing::new().line(240));   // Single line spacing
+                .line_spacing(docx_rs::LineSpacing::new().line(line_spacing));   // Single line spacing
             docx = docx.add_paragraph(student_info_paragraph);
 
             // Answers
@@ -703,7 +1123,7 @@ impl Generator
                                                     .add_text(answers_text)
                                                     .size(answer_sheet_font_size)
                                                 ) // 12 pt for default answer sheet font size
-                                        .line_spacing(docx_rs::LineSpacing::new().line(240));   // Single line spacing
+                                        .line_spacing(docx_rs::LineSpacing::new().line(line_spacing));   // Single line spacing
             docx = docx.add_paragraph(answers_paragraph);
             docx = docx.add_paragraph(Paragraph::new()); // Blank line
         }
@@ -782,14 +1202,22 @@ impl Generator
     ///
     /// # Output
     /// `Result<(), String>` - Returns `Ok(())` on success, or an `Err` with a
-    ///                        `String` describing the error on failure.
+    /// `String` describing the error on failure.
     ///
     /// # Caution
-    /// This method will look for four specific fonts in the subdirectory
-    /// `fonts` that is located in the current working directory. The fonts that
-    /// should be in the folder `./fonts` should have the names:
-    /// font-Regular.ttf, font-Italic.ttf, font-Bold.ttf, and
-    /// font-BoldItalic.ttf. If there is no such a folder or there is not any
+    ///
+    /// This method searches for four specific font files within a `./fonts` 
+    /// subdirectory relative to the current working directory.
+    ///
+    /// The following files must be present for the function to operate correctly:
+    /// * `font-Regular.ttf`
+    /// * `font-Italic.ttf`
+    /// * `font-Bold.ttf`
+    /// * `font-BoldItalic.ttf`
+    ///
+    /// If the directory or any of these files are missing, the function will fail. 
+    /// Ensure that the `fonts` directory is created and all four files are 
+    /// correctly named before calling this method.
     /// 
     /// # Examples
     /// ```no_run
@@ -812,12 +1240,12 @@ impl Generator
     /// ```
     pub fn save_shuffled_exams_in_pdf(&self, path: &Path) -> Result<(), String>
     {
-        // let font_style = style::
         let font_family = fonts::from_files("./fonts", "font", None).map_err(|e| format!("Failed to load font: {}", e))?;
         let mut doc = Document::new(font_family);
         // Set 1cm margins (10mm) and page numbers for all sides
         let mut decorator = SimplePageDecorator::new();
-        decorator.set_margins(10); // 10mm = 1cm
+        let margin = (self.margin_left_in_mm + self.margin_right_in_mm + self.margin_top_in_mm + self.margin_buttom_in_mm) / 4.0;
+        decorator.set_margins(margin); // 10mm = 1cm
         doc.set_page_decorator(decorator);
         let shuffled_qbanks = self.get_shuffled_qbanks();
 
@@ -830,10 +1258,10 @@ impl Generator
 
         // Add answer sheet
         doc.push(elements::PageBreak::new());
-        let answer_style = style::Style::new().with_font_size(12);
-        let answer_title_style = style::Style::new().with_font_size(14);
+        let answer_style = style::Style::new().with_font_size(self.answer_sheet_font_size as u8);
+        let answer_title_style = style::Style::new().with_font_size(self.title_font_size as u8);
 
-        let mut title_paragraph = elements::Paragraph::new("Answer Sheet        정답지        Ответы");
+        let mut title_paragraph = elements::Paragraph::new(self.answer_sheet_title.clone());
         title_paragraph.set_alignment(Alignment::Center);
         doc.push(title_paragraph.styled(answer_title_style));
         doc.push(elements::Paragraph::new("")); // Blank line
@@ -843,8 +1271,7 @@ impl Generator
         for (student, qbank) in &shuffled_qbanks {
             // Student Info
             let student_info_text = format!("{}: {}        {}: {}",
-                header.get_name(), student.get_name(),
-                header.get_id(), student.get_id()
+                header.get_name(), student.get_name(), header.get_id(), student.get_id()
             );
             doc.push(elements::Paragraph::new(student_info_text).styled(answer_style));
 
@@ -852,11 +1279,11 @@ impl Generator
             let mut answers_text = String::new();
             for (i, question) in qbank.get_questions().iter().enumerate() {
                 let correct_choices: Vec<String> = question.get_choices()
-                    .iter()
-                    .enumerate()
-                    .filter(|(_, (_, is_correct))| *is_correct)
-                    .map(|(j, _)| ((b'a' + j as u8) as char).to_string())
-                    .collect();
+                                                            .iter()
+                                                            .enumerate()
+                                                            .filter(|(_, (_, is_correct))| *is_correct)
+                                                            .map(|(j, _)| ((b'a' + j as u8) as char).to_string())
+                                                            .collect();
                 let answer_string = correct_choices.join(", ");
                 answers_text.push_str(&format!("{}. {}    ", i + 1, answer_string));
             }
@@ -886,8 +1313,8 @@ impl Generator
     fn write_exam_content_to_pdf(&self, doc: &mut genpdf::Document, student: &Student, qbank: &QBank) -> Result<(), String>
     {
         // Define font sizes
-        let title_font_size = 14;
-        let normal_font_size = 11;
+        let title_font_size = self.title_font_size as u8;       // 14 pt for default
+        let normal_font_size = self.default_font_size as u8;    // 11 pt for default
         let header = qbank.get_header();
 
         // Exam Title
