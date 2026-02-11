@@ -1,8 +1,9 @@
 // use std::io;
 // use std::fs::File;
 // use std::io::Write;
-use cryptocol::random::Slapdash as PRNG;
 use std::collections::HashMap;
+
+use cryptocol::random::Random as PRNG;
 
 use crate::{ QBank, Student };
 
