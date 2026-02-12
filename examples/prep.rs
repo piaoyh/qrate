@@ -1,4 +1,5 @@
 use std::io;
+use std::num::ParseIntError;
 
 use qrate::{ SQLiteDB, QBDB, Generator };
 
@@ -126,7 +127,7 @@ fn get_user_answers(expected_count: usize, max_choice: usize) -> Vec<u8>
         io::stdin().read_line(&mut input).expect("Failed to read line");
         let input = input.trim();
 
-        let parsed_answers = input.split_whitespace().map(|s| s.parse::<u8>()).collect();
+        let parsed_answers: Result<Vec<u8>, ParseIntError> = input.split_whitespace().map(|s| s.parse::<u8>()).collect();
         match parsed_answers
         {
             Ok(mut answers) =>

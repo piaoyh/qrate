@@ -60,40 +60,6 @@ impl Generator
     const FOOTER_UNDERLINE: u16 = 0b_100_0000_0000_0000;
     const FOOTER_STRIKE: u16 = 0b_1000_0000_0000_0000;
 
-    // pub fn new_one_set(qbank: &QBank, start: u16, end: u16, selected: usize) -> Option<Self>
-    /// Creates a new `Generator` instance for a single shuffled set.
-    ///
-    /// This function generates a single shuffled question set based on the provided
-    /// question bank, starting and ending question numbers.
-    ///
-    /// # Arguments
-    /// * `qbank` - A reference to the `QBank` containing the original questions.
-    /// * `start` - The starting number of the questions to include (inclusive).
-    /// * `end` - The ending number of the questions to include (inclusive).
-    /// * `selected` - The number of questions to be randomly selected.
-    ///
-    /// # Output
-    /// An `Option<Self>` which is `Some(Generator)` if successful, or `None` if
-    /// the generation fails (e.g., invalid question range).
-    ///
-    /// # Examples
-    /// ```
-    /// use qrate::{ QBank, Generator, Student };
-    ///
-    /// let mut qbank = QBank::new_empty();
-    /// qbank.add_question("Question 1".to_string(), "Answer 1".to_string());
-    /// qbank.add_question("Question 2".to_string(), "Answer 2".to_string());
-    ///
-    /// let generator = Generator::new_one_set(&qbank, 1, 2, 2);
-    /// assert!(generator.is_some());
-    /// ```
-    pub fn new_one_set(qbank: &QBank, start: u16, end: u16, selected: usize) -> Option<Self>
-    {
-        let student = Student::new_empty();
-        let students = vec![student];
-        Self::new(qbank, start, end, selected, &students)
-    }
-
     // pub fn new(qbank: &QBank, start: u16, end: u16, selected: usize, students: &Students) -> Option<Self>
     /// Creates a new `Generator` instance for multiple shuffled sets, one for each student.
     ///
@@ -155,6 +121,79 @@ impl Generator
                 answer_sheet_title: "Answer Sheet        정답지        Ответы".to_string()
              }
         )
+    }
+
+    // pub fn new_empty() -> Self
+    /// Creates a new, empty `Generator` instance with default values.
+    ///
+    /// This function initializes all fields of the `Generator` struct to their
+    /// default empty or initial states, such as an empty `QBank` and
+    /// `ShuffledQSets`, and predefined font sizes and margins.
+    ///
+    /// # Output
+    /// `Self` - A new `Generator` instance, ready for configuration.
+    ///
+    /// # Examples
+    /// ```
+    /// use qrate::Generator;
+    ///
+    /// let generator = Generator::new_empty();
+    /// // Verify that the generator's internal qbank is empty.
+    /// assert!(generator.origin.get_questions().is_empty());
+    /// ```
+    pub fn new_empty() -> Self
+    {
+        Self
+        {
+            origin: QBank::new_empty(),
+            shuffled_qsets: ShuffledQSets::new(),
+            current_question_number: 0,
+            title_font_size: 14.0,
+            body_font_size: 11.0,
+            answer_sheet_font_size: 12.0,
+            footer_font_size: 9.0,
+            attributes: Self::TITLE_BOLD,
+            margin_left_in_mm: 10.0,
+            margin_right_in_mm: 10.0,
+            margin_top_in_mm: 10.0,
+            margin_buttom_in_mm: 10.0,
+            line_spacing: 1.0,
+            answer_sheet_title: "Answer Sheet        정답지        Ответы".to_string()
+        }
+    }
+
+    // pub fn new_one_set(qbank: &QBank, start: u16, end: u16, selected: usize) -> Option<Self>
+    /// Creates a new `Generator` instance for a single shuffled set.
+    ///
+    /// This function generates a single shuffled question set based on the provided
+    /// question bank, starting and ending question numbers.
+    ///
+    /// # Arguments
+    /// * `qbank` - A reference to the `QBank` containing the original questions.
+    /// * `start` - The starting number of the questions to include (inclusive).
+    /// * `end` - The ending number of the questions to include (inclusive).
+    /// * `selected` - The number of questions to be randomly selected.
+    ///
+    /// # Output
+    /// An `Option<Self>` which is `Some(Generator)` if successful, or `None` if
+    /// the generation fails (e.g., invalid question range).
+    ///
+    /// # Examples
+    /// ```
+    /// use qrate::{ QBank, Generator, Student };
+    ///
+    /// let mut qbank = QBank::new_empty();
+    /// qbank.add_question("Question 1".to_string(), "Answer 1".to_string());
+    /// qbank.add_question("Question 2".to_string(), "Answer 2".to_string());
+    ///
+    /// let generator = Generator::new_one_set(&qbank, 1, 2, 2);
+    /// assert!(generator.is_some());
+    /// ```
+    pub fn new_one_set(qbank: &QBank, start: u16, end: u16, selected: usize) -> Option<Self>
+    {
+        let student = Student::new_empty();
+        let students = vec![student];
+        Self::new(qbank, start, end, selected, &students)
     }
 
     // pub fn get_title_font_size(&self) -> f32
