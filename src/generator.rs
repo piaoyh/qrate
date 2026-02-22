@@ -20,6 +20,7 @@ use crate::{ Students, Student };
 use crate::{ ShuffledQSet, ShuffledQSets };
 
 
+#[derive(Debug, Clone)]
 pub struct Generator
 {
     origin: QBank,

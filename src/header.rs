@@ -12,7 +12,7 @@
 ///
 /// This struct holds information like the title of the exam, author's name,
 /// categories of questions, and general notices.
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct Header
 {
     title: String,

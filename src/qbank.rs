@@ -13,7 +13,7 @@ use crate::Header;
 use crate::Question;
 
 /// Represents a Question Bank, containing a header and a vector of questions.
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct QBank
 {
     header: Header,

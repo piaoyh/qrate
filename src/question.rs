@@ -13,7 +13,7 @@ pub type Choices = Vec<ChoiceAnswer>;
 pub type Questions = Vec<Question>;
 
 /// Represents a single question with its properties.
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct Question
 {
     id: u16,        // 1-based unique identifier. Should be in order as class progress

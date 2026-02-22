@@ -18,6 +18,7 @@ use crate::{ Question, Choices, check_path };
 ///
 /// This struct provides methods to read from and write to `.xlsx` files,
 /// structuring the data into "header" and "bank" sheets.
+#[derive(Debug, Clone)]
 pub struct Excel
 {
     /// The path to the Excel file.
